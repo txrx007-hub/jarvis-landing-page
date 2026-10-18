@@ -288,6 +288,7 @@
       <button id="serverCloudBtn" class="secondary">Use cloud</button>
     </div>
     <button id="panelBtn" class="secondary" style="display:none;margin-top:10px">Open Jarvis backend &#8599;</button>
+    <p class="help" id="panelPin" style="display:none">Backend PIN for other devices: <b id="panelPinVal" style="letter-spacing:2px"></b></p>
     <div id="serverPanel">
       <input type="text" id="serverIp" placeholder="192.168.x.y or name.local" autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="url" aria-label="Own server address">
       <p class="help">Port 8003 is assumed; add <code>:port</code> to change it. Only addresses on your own network are accepted here.</p>
@@ -780,10 +781,30 @@ function renderServer(s) {
   // visit came from this page and lets it in without asking for its PIN.
   panelUrl = own && s.panel_url ? s.panel_url : "";
   document.getElementById("panelBtn").style.display = panelUrl ? "block" : "none";
+  loadPanelPin();
   var ip = document.getElementById("serverIp");
   if (own && m && document.activeElement !== ip && !ip.value) ip.value = m[1].replace(/:8003$/, "");
 }
 var panelUrl = "";
+var panelPinFor = "", panelPinRetry = 0;
+// The PIN lives on the PC, not on the robot: the backend hands it to this page (a script include) only
+// while its "Jarvis page button skips the PIN" option is on, so switching that off hides it here too.
+function loadPanelPin() {
+  var box = document.getElementById("panelPin");
+  if (!panelUrl) { box.style.display = "none"; panelPinFor = ""; return; }
+  if (panelPinFor === panelUrl || Date.now() < panelPinRetry) return;
+  panelPinFor = panelUrl;
+  window.JARVIS_PANEL_PIN = "";
+  var s = document.createElement("script");
+  s.src = panelUrl + "pin.js?" + Date.now();
+  s.onload = function () {
+    var pin = window.JARVIS_PANEL_PIN || "";
+    document.getElementById("panelPinVal").textContent = pin;
+    box.style.display = pin ? "block" : "none";
+  };
+  s.onerror = function () { box.style.display = "none"; panelPinFor = ""; panelPinRetry = Date.now() + 30000; };
+  document.head.appendChild(s);
+}
 document.getElementById("panelBtn").addEventListener("click", function () {
   if (panelUrl) window.open(panelUrl + "auto", "_blank");
 });
