@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="origin">
 <title>Jarvis settings</title>
 <script>
 // Theme: the saved choice wins, otherwise follow the device. Set early to avoid a flash.
@@ -163,6 +164,11 @@
   #power .pstate span, #server .pstate span { color: var(--accent); font-weight: 600; }
   #power .pbtns, #server .pbtns { display: flex; gap: 10px; }
   #power .pbtns button, #server .pbtns button { margin-top: 0; }
+  #volume .prow { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  #volume .prow b { font-weight: 600; }
+  #volume .pstate { color: var(--muted); font-size: 13px; }
+  #volume .pstate span { color: var(--accent); font-weight: 600; }
+  #volume input[type=range] { margin-top: 4px; }
   #serverPanel { display: none; margin-top: 12px; }
   #serverPanel.open { display: block; }
   #serverPanel input[type=text] { margin-top: 0; }
@@ -269,6 +275,11 @@
       <button id="sleepGo">Go to deep sleep</button>
     </div>
   </div>
+  <div id="volume" class="card">
+    <div class="prow"><b>Volume</b><span class="pstate"><span id="volVal">--</span></span></div>
+    <input type="range" id="volSlider" min="0" max="100" step="1" value="50" aria-label="Speaker volume">
+    <p class="help" id="volHelp"></p>
+  </div>
   <div id="server" class="card">
     <div class="prow"><b>Voice server</b><span class="pstate"><span id="serverState">--</span></span></div>
     <p class="help" id="serverUrl"></p>
@@ -276,6 +287,7 @@
       <button id="serverOwnBtn" class="secondary">Own server&hellip;</button>
       <button id="serverCloudBtn" class="secondary">Use cloud</button>
     </div>
+    <button id="panelBtn" class="secondary" style="display:none;margin-top:10px">Open Jarvis backend &#8599;</button>
     <div id="serverPanel">
       <input type="text" id="serverIp" placeholder="192.168.x.y or name.local" autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="url" aria-label="Own server address">
       <p class="help">Port 8003 is assumed; add <code>:port</code> to change it. Only addresses on your own network are accepted here.</p>
@@ -338,7 +350,14 @@ var VOICE_COMMANDS = [
   ]],
   ["Screen", [
     ["Speaking effect", "“switch the screen effect to radial” (off, winamp, rainbow, scope, radial, vu, mouth, orb)"],
-    ["Clock / screensaver", "“show the clock”"]
+    ["Clock / screensaver", "“show the clock”"],
+    ["QR: settings page", "“show me a QR code for your settings page” (Jarvis shows a code that opens this page)"],
+    ["QR: backend", "“show me a QR code for your backend” / “…for your server” (needs your own server)"],
+    ["Both QR codes", "“show me your QR codes” / “how do I open your pages?” (one after the other, about a minute)"]
+  ]],
+  ["Volume", [
+    ["Read it", "“what is your volume?”, “what is your max volume?”"],
+    ["Change it", "“set the volume to 80”, “turn the volume up” (never above the Max volume cap)"]
   ]],
   ["Faces", [
     ["Show an expression", "“look sad”, “show a happy face”"],
@@ -658,6 +677,7 @@ function loadStatus() {
     var inK = (s.audio_in_hz || 0) / 1000, outK = (s.audio_out_hz || 0) / 1000;
     $("iAudio", !inK ? "--" : (!outK || outK === inK ? inK + " kHz" : inK + " / " + outK + " kHz"));
     renderServer(s);
+    renderVolume(s);
   }).catch(function () {
     document.getElementById("dot").className = "dot off";
     document.getElementById("sub").textContent = "Could not reach Jarvis";
@@ -722,6 +742,32 @@ document.getElementById("sleepGo").addEventListener("click", function () {
   sleepPanel.classList.remove("open");
 });
 
+// Volume card: the speaker plays at the lower of the requested volume (this slider, or "turn the volume up")
+// and the Max volume cap from the Audio settings, so show both instead of leaving the cap to look like the volume.
+var volDragging = false, volTimer = null;
+function renderVolume(s) {
+  var card = document.getElementById("volume");
+  if (s.volume === undefined) { card.style.display = "none"; return; }
+  var slider = document.getElementById("volSlider");
+  if (!volDragging) slider.value = s.volume_requested;
+  document.getElementById("volVal").textContent = s.volume + "%";
+  document.getElementById("volHelp").textContent = s.volume_requested > s.volume_cap
+    ? "Asked for " + s.volume_requested + "%, but capped at " + s.volume_cap + "% by Max volume (Audio and wake word settings)."
+    : "Max volume cap: " + s.volume_cap + "% (Audio and wake word settings).";
+}
+(function () {
+  var slider = document.getElementById("volSlider");
+  slider.addEventListener("input", function () { volDragging = true; document.getElementById("volVal").textContent = slider.value + "%"; });
+  slider.addEventListener("change", function () {
+    fetch("/api/volume?value=" + slider.value, { method: "POST", cache: "no-store" })
+      .then(function (r) { return r.json(); })
+      .then(function (r) { if (r && r.volume !== undefined) document.getElementById("volVal").textContent = r.volume + "%"; })
+      .catch(function () {});
+    clearTimeout(volTimer);
+    volTimer = setTimeout(function () { volDragging = false; loadStatus(); }, 1500);
+  });
+})();
+
 // Voice server card: the xiaozhi.me cloud (default) or an own server on the LAN. Saving restarts Jarvis.
 function renderServer(s) {
   if (s.server === undefined) { document.getElementById("server").style.display = "none"; return; }
@@ -730,9 +776,17 @@ function renderServer(s) {
   document.getElementById("serverState").textContent = own ? "Own server" : "Cloud (xiaozhi.me)";
   document.getElementById("serverUrl").textContent = own ? "Talking to " + (m ? m[1] : s.server) : "Using the built-in default server.";
   document.getElementById("serverCloudBtn").disabled = !own;
+  // The control panel of the own server (port 8090) opens in a new window; the panel recognises that the
+  // visit came from this page and lets it in without asking for its PIN.
+  panelUrl = own && s.panel_url ? s.panel_url : "";
+  document.getElementById("panelBtn").style.display = panelUrl ? "block" : "none";
   var ip = document.getElementById("serverIp");
   if (own && m && document.activeElement !== ip && !ip.value) ip.value = m[1].replace(/:8003$/, "");
 }
+var panelUrl = "";
+document.getElementById("panelBtn").addEventListener("click", function () {
+  if (panelUrl) window.open(panelUrl + "auto", "_blank");
+});
 function serverMsg(text, ok) {
   var el = document.getElementById("serverMsg");
   el.textContent = text;

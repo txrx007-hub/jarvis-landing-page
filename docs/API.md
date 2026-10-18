@@ -18,6 +18,7 @@ deep sleep. Replies are `application/json` unless noted. `<ip>` is the robot's a
 | POST | `/api/reset` | Reset all settings to defaults |
 | POST | `/api/drive` | Drive the wheels (remote control) |
 | POST | `/api/power` | Nap, wake up, deep sleep |
+| POST | `/api/volume` | Set the speaker volume (the requested volume; the cap from the settings still applies) |
 | POST | `/api/server` | Choose the voice server: the xiaozhi.me cloud or an own server on the LAN |
 
 ## GET /api/status
@@ -45,6 +46,8 @@ deep sleep. Replies are `application/json` unless noted. `<ip>` is the robot's a
 | `heap_largest_kb` | Largest free block of internal memory |
 | `rssi` | WiFi signal in dBm |
 | `server`, `server_custom` | The voice server's OTA URL in use, and whether it is an own server (`true`) or the built-in default cloud (`false`) |
+| `volume`, `volume_requested`, `volume_cap` | What the speaker plays at, what was asked for, and the `max_volume` cap. `volume` = the lower of the other two |
+| `panel_url` | Address of the Jarvis backend control panel (`http://<server host>:8090/`) when an own server is set, otherwise `""`. The settings page shows an "Open Jarvis backend" button for it |
 
 Older firmware may leave out newer fields (`cpu_load`, `fps`, `heap_largest_kb`, `audio_*`, `camera_*`,
 `board_name`, `power`); clients should treat every field as optional.
@@ -107,3 +110,9 @@ send it to a host on the internet. A full URL or any other host can only be set 
 
 Reply `{"ok": true, "message": "...", "server": "...", "server_custom": true}` and the robot restarts about 2 s later; a
 refused value gives `{"ok": false, "message": "<reason>"}`, a malformed body HTTP 400.
+
+## POST /api/volume?value=0..100
+
+Sets the requested speaker volume (saved; the same value "turn the volume up" changes). The speaker plays at the lower of
+this and the `max_volume` setting, so the reply tells you what it works out to:
+`{"ok": true, "volume_requested": 90, "volume": 78, "volume_cap": 78}`. A value outside 0..100 gives HTTP 400.

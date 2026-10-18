@@ -74,6 +74,14 @@ function openGroup(title){var b=Array.prototype.find.call(document.querySelector
 """
 
 
+def volume_cap():
+    return next((s["value"] for s in STATE["settings"] if s["key"] == "max_volume"), 80)
+
+
+def volume_requested():
+    return STATE.get("volume", 70)
+
+
 def status():
     s = STATE
     return {
@@ -84,6 +92,8 @@ def status():
         "power": "battery", "cpu_mhz": 160 if s["napping"] else 240,
         "ram_free_kb": 71, "ram_total_kb": 399, "psram_free_kb": 3300, "psram_total_kb": 8192,
         "server": s["server"] or DEFAULT_SERVER, "server_custom": bool(s["server"]),
+        "volume": min(volume_requested(), volume_cap()), "volume_requested": volume_requested(), "volume_cap": volume_cap(),
+        "panel_url": ("http://%s:8090/" % s["server"].split("://")[1].split("/")[0].split(":")[0]) if s["server"] else "",
     }
 
 
@@ -151,6 +161,14 @@ class Handler(BaseHTTPRequestHandler):
         elif url.path == "/api/reset":
             STATE["settings"] = copy.deepcopy(DEFAULT_SETTINGS)
             self._send(json.dumps({"ok": True, "message": "All settings reset to defaults."}))
+        elif url.path == "/api/volume":
+            try:
+                value = int(q.get("value", [""])[0])
+                assert 0 <= value <= 100
+            except Exception:
+                return self._send(b"value must be 0 to 100", "text/plain", 400)
+            STATE["volume"] = value
+            self._send(json.dumps({"ok": True, "volume_requested": value, "volume": min(value, volume_cap()), "volume_cap": volume_cap()}))
         elif url.path == "/api/server":
             try:
                 value = str(json.loads(body)["server"]).strip()
