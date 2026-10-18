@@ -42,11 +42,22 @@ DEFAULT_SETTINGS = [
     {"key": "log_level", "kind": "enum", "help": "serial log detail", "value": "warn", "options": ["error", "warn", "info", "debug"]},
 ]
 
-STATE = {"settings": copy.deepcopy(DEFAULT_SETTINGS), "napping": False, "started": time.time(), "drive": (0, 0, 0.0)}
+DEFAULT_SERVER = "https://api.example.invalid/xiaozhi/ota/"  # stands in for the built-in cloud URL
+STATE = {"settings": copy.deepcopy(DEFAULT_SETTINGS), "napping": False, "started": time.time(), "drive": (0, 0, 0.0),
+         "server": ""}  # "" = built-in default (cloud)
+
+
+def private_host(host):
+    """Same rule as the firmware's web page: 10/8, 172.16/12, 192.168/16 or a LAN name."""
+    parts = host.split(".")
+    if all(p.isdigit() for p in parts) and len(parts) == 4:
+        a, b = int(parts[0]), int(parts[1])
+        return a == 10 or (a == 172 and 16 <= b <= 31) or (a == 192 and b == 168)
+    return "." not in host or host.endswith((".local", ".lan"))
 
 # Page states for screenshots (?shot=...): name -> (script run after the page loaded, window height in px).
 # Chrome's headless window cannot be narrower than ~500 px; the page's column is 480 px max anyway.
-HIDE_TOP = "['info','power'].forEach(function(i){$(i).style.display='none';}); document.querySelector('.toggles').style.display='none';"
+HIDE_TOP = "['info','power','server'].forEach(function(i){$(i).style.display='none';}); document.querySelector('.toggles').style.display='none';"
 SHOTS = {
     "top-dark": ("setTheme('dark');", 860),
     "top-light": ("setTheme('light');", 860),
@@ -72,6 +83,7 @@ def status():
         "cpu_load": 42, "fps": 27, "heap_largest_kb": 61, "audio_in_hz": 16000, "audio_out_hz": 24000,
         "power": "battery", "cpu_mhz": 160 if s["napping"] else 240,
         "ram_free_kb": 71, "ram_total_kb": 399, "psram_free_kb": 3300, "psram_total_kb": 8192,
+        "server": s["server"] or DEFAULT_SERVER, "server_custom": bool(s["server"]),
     }
 
 
@@ -139,6 +151,26 @@ class Handler(BaseHTTPRequestHandler):
         elif url.path == "/api/reset":
             STATE["settings"] = copy.deepcopy(DEFAULT_SETTINGS)
             self._send(json.dumps({"ok": True, "message": "All settings reset to defaults."}))
+        elif url.path == "/api/server":
+            try:
+                value = str(json.loads(body)["server"]).strip()
+            except Exception:
+                return self._send(b'expected {"server": "192.168.x.y" or "default"}', "text/plain", 400)
+            if value in ("", "default"):
+                STATE["server"] = ""
+                msg = "Server set to the built-in default (xiaozhi.me cloud)."
+            elif "://" in value:
+                return self._send(json.dumps({"ok": False, "message": "Enter an IP address or LAN name, not a full URL."}))
+            else:
+                host, _, port = value.partition(":")
+                if not host or (port and not (port.isdigit() and 1 <= int(port) <= 65535)):
+                    return self._send(json.dumps({"ok": False, "message": "not a valid IP address or host name"}))
+                if not private_host(host):
+                    return self._send(json.dumps({"ok": False, "message": "From the web page only a LAN address is accepted."}))
+                STATE["server"] = "http://%s:%s/xiaozhi/ota/" % (host, port or "8003")
+                msg = "Server set to " + STATE["server"]
+            self._send(json.dumps({"ok": True, "message": msg + " Restarting in 2 s.", "server": STATE["server"] or DEFAULT_SERVER,
+                                   "server_custom": bool(STATE["server"])}))
         elif url.path == "/api/drive":
             STATE["drive"] = (int(q.get("l", ["0"])[0]), int(q.get("r", ["0"])[0]), time.time())
             self._send(b"", "text/plain")

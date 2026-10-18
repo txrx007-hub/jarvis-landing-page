@@ -157,12 +157,17 @@
   #remote .help { text-align: center; }
   .toggles { display: flex; gap: 10px; }
   #power { margin-top: 10px; }
-  #power .prow { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
-  #power .prow b { font-weight: 600; }
-  #power .pstate { color: var(--muted); font-size: 13px; }
-  #power .pstate span { color: var(--accent); font-weight: 600; }
-  #power .pbtns { display: flex; gap: 10px; }
-  #power .pbtns button { margin-top: 0; }
+  #power .prow, #server .prow { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  #power .prow b, #server .prow b { font-weight: 600; }
+  #power .pstate, #server .pstate { color: var(--muted); font-size: 13px; }
+  #power .pstate span, #server .pstate span { color: var(--accent); font-weight: 600; }
+  #power .pbtns, #server .pbtns { display: flex; gap: 10px; }
+  #power .pbtns button, #server .pbtns button { margin-top: 0; }
+  #serverPanel { display: none; margin-top: 12px; }
+  #serverPanel.open { display: block; }
+  #serverPanel input[type=text] { margin-top: 0; }
+  #serverPanel button { margin-top: 10px; }
+  #serverUrl { margin: 0 0 10px; overflow-wrap: anywhere; }
   #sleepPanel { display: none; margin-top: 12px; }
   #sleepPanel.open { display: block; }
   .sleep-time { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -263,6 +268,20 @@
       <p id="sleepWarn"></p>
       <button id="sleepGo">Go to deep sleep</button>
     </div>
+  </div>
+  <div id="server" class="card">
+    <div class="prow"><b>Voice server</b><span class="pstate"><span id="serverState">--</span></span></div>
+    <p class="help" id="serverUrl"></p>
+    <div class="pbtns">
+      <button id="serverOwnBtn" class="secondary">Own server&hellip;</button>
+      <button id="serverCloudBtn" class="secondary">Use cloud</button>
+    </div>
+    <div id="serverPanel">
+      <input type="text" id="serverIp" placeholder="192.168.x.y or name.local" autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="url" aria-label="Own server address">
+      <p class="help">Port 8003 is assumed; add <code>:port</code> to change it. Only addresses on your own network are accepted here.</p>
+      <button id="serverGo">Save and restart Jarvis</button>
+    </div>
+    <p class="status" id="serverMsg"></p>
   </div>
   <div id="remote" class="card">
     <div class="pad">
@@ -638,6 +657,7 @@ function loadStatus() {
     $("iWifi", s.rssi ? s.rssi + " dBm" : "--");
     var inK = (s.audio_in_hz || 0) / 1000, outK = (s.audio_out_hz || 0) / 1000;
     $("iAudio", !inK ? "--" : (!outK || outK === inK ? inK + " kHz" : inK + " / " + outK + " kHz"));
+    renderServer(s);
   }).catch(function () {
     document.getElementById("dot").className = "dot off";
     document.getElementById("sub").textContent = "Could not reach Jarvis";
@@ -700,6 +720,50 @@ document.getElementById("sleepGo").addEventListener("click", function () {
   document.getElementById("powerState").textContent = "Going to sleep...";
   powerPost("action=deepsleep&minutes=" + total);
   sleepPanel.classList.remove("open");
+});
+
+// Voice server card: the xiaozhi.me cloud (default) or an own server on the LAN. Saving restarts Jarvis.
+function renderServer(s) {
+  if (s.server === undefined) { document.getElementById("server").style.display = "none"; return; }
+  var own = !!s.server_custom;
+  var m = /^[a-z]+:\/\/([^\/]+)/i.exec(s.server || "");
+  document.getElementById("serverState").textContent = own ? "Own server" : "Cloud (xiaozhi.me)";
+  document.getElementById("serverUrl").textContent = own ? "Talking to " + (m ? m[1] : s.server) : "Using the built-in default server.";
+  document.getElementById("serverCloudBtn").disabled = !own;
+  var ip = document.getElementById("serverIp");
+  if (own && m && document.activeElement !== ip && !ip.value) ip.value = m[1].replace(/:8003$/, "");
+}
+function serverMsg(text, ok) {
+  var el = document.getElementById("serverMsg");
+  el.textContent = text;
+  el.className = "status " + (ok ? "ok" : "err");
+}
+function serverPost(value) {
+  return fetch("/api/server", {
+    method: "POST", cache: "no-store", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ server: value })
+  }).then(function (r) { return r.json().catch(function () { return { ok: false, message: "Jarvis refused the request." }; }); })
+    .catch(function () { return { ok: false, message: "Could not reach Jarvis." }; });
+}
+function serverSwitch(value, question) {
+  if (!confirm(question)) return;
+  serverMsg("Saving...", true);
+  serverPost(value).then(function (r) {
+    serverMsg(r.message || (r.ok ? "Saved." : "Not saved."), !!r.ok);
+    if (r.ok) document.getElementById("serverPanel").classList.remove("open");
+  });
+}
+document.getElementById("serverOwnBtn").addEventListener("click", function () {
+  document.getElementById("serverPanel").classList.toggle("open");
+});
+document.getElementById("serverCloudBtn").addEventListener("click", function () {
+  serverSwitch("default", "Switch Jarvis back to the xiaozhi.me cloud? Jarvis restarts.");
+});
+document.getElementById("serverGo").addEventListener("click", function () {
+  var v = document.getElementById("serverIp").value.trim();
+  if (!v) { serverMsg("Enter the address of your server first.", false); return; }
+  serverSwitch(v, "Switch Jarvis to your own server at " + v + "? Jarvis restarts. " +
+    "If that server is not running, Jarvis has no voice until you switch back (here with 'Use cloud', or with the USB command !server default).");
 });
 
 var themeSwitch = document.getElementById("themeSwitch");

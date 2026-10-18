@@ -18,6 +18,7 @@ deep sleep. Replies are `application/json` unless noted. `<ip>` is the robot's a
 | POST | `/api/reset` | Reset all settings to defaults |
 | POST | `/api/drive` | Drive the wheels (remote control) |
 | POST | `/api/power` | Nap, wake up, deep sleep |
+| POST | `/api/server` | Choose the voice server: the xiaozhi.me cloud or an own server on the LAN |
 
 ## GET /api/status
 
@@ -29,7 +30,8 @@ deep sleep. Replies are `application/json` unless noted. `<ip>` is the robot's a
   "uptime_s": 946, "state": 3, "napping": false, "power": "battery",
   "cpu_load": 42, "cpu_mhz": 240, "fps": 27,
   "ram_free_kb": 71, "ram_total_kb": 399, "psram_free_kb": 3300, "psram_total_kb": 8192,
-  "heap_largest_kb": 61, "audio_in_hz": 16000, "audio_out_hz": 24000
+  "heap_largest_kb": 61, "audio_in_hz": 16000, "audio_out_hz": 24000,
+  "server": "http://192.168.1.20:8003/xiaozhi/ota/", "server_custom": true
 }
 ```
 
@@ -42,6 +44,7 @@ deep sleep. Replies are `application/json` unless noted. `<ip>` is the robot's a
 | `fps` | Screen redraws per second since the previous call; 0 when the screen is static |
 | `heap_largest_kb` | Largest free block of internal memory |
 | `rssi` | WiFi signal in dBm |
+| `server`, `server_custom` | The voice server's OTA URL in use, and whether it is an own server (`true`) or the built-in default cloud (`false`) |
 
 Older firmware may leave out newer fields (`cpu_load`, `fps`, `heap_largest_kb`, `audio_*`, `camera_*`,
 `board_name`, `power`); clients should treat every field as optional.
@@ -91,3 +94,16 @@ itself. `l=0&r=0` stops immediately and cancels any queued movement.
 | `deepsleep` | `minutes=0..1440` | Everything off including WiFi, starts about 2 s later; `0` = until the BOOT button is pressed. Only the timer or the BOOT button wakes the robot; this API cannot. |
 
 Reply `{"ok": true, "message": "..."}`; an unknown `action` or `minutes` outside 0..1440 gives HTTP 400.
+
+## POST /api/server
+
+Body (JSON): `{"server": "192.168.1.20"}`. The value is `"default"` (back to the xiaozhi.me cloud), an IPv4 address or LAN
+host name, optionally with `:port` (default `8003`; the robot then asks `http://<host>:<port>/xiaozhi/ota/`).
+
+Only addresses on your own network are accepted here (10.x.x.x, 172.16-31.x.x, 192.168.x.x, a name without dots, `.local`, `.lan`):
+the page has no login and the robot streams its microphone to the server, so someone on your WiFi must not be able to
+send it to a host on the internet. A full URL or any other host can only be set from the USB console (`!server <value>`;
+`!server check <value>` shows what would be accepted without saving).
+
+Reply `{"ok": true, "message": "...", "server": "...", "server_custom": true}` and the robot restarts about 2 s later; a
+refused value gives `{"ok": false, "message": "<reason>"}`, a malformed body HTTP 400.
