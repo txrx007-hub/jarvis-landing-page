@@ -324,7 +324,7 @@ var COLLAPSIBLE = { "Motors": true, "Audio and wake word": true, "Screen and qui
 var openGroups = {};
 var GROUPS = [
   ["Motors", ["motor_trim", "turn_ms_per_90", "motor_a_invert", "motor_b_invert", "motor_swap", "soft_start_ms"]],
-  ["Audio and wake word", ["mic_gain_db", "wake_threshold", "max_volume", "wake_chirp"]],
+  ["Audio and wake word", ["mic_gain_db", "wake_threshold", "wake_chirp"]],
   ["Screen and quiet hours", ["idle_clock_min", "quiet_start", "quiet_end"]],
   ["Weather", ["weather_city"]],
   ["Visualizer", ["visualizer_mode"]],
@@ -334,7 +334,7 @@ var LABELS = {
   motor_max_speed: "Top speed", motor_trim: "Steering trim", turn_ms_per_90: "Turn duration (90°)",
   motor_a_invert: "Right motor direction", motor_b_invert: "Left motor direction", motor_swap: "Swap left/right",
   soft_start_ms: "Soft start ramp", mic_gain_db: "Microphone gain", wake_threshold: "Wake sensitivity",
-  max_volume: "Max volume", shutter_sound: "Camera shutter sound", wake_chirp: "Wake chirp",
+  shutter_sound: "Camera shutter sound", wake_chirp: "Wake chirp",
   idle_clock_min: "Idle clock after", quiet_start: "Quiet hours start", quiet_end: "Quiet hours end",
   weather_city: "Weather city", visualizer_mode: "Speaking screen effect", log_level: "Log detail"
 };
@@ -358,7 +358,7 @@ var VOICE_COMMANDS = [
   ]],
   ["Volume", [
     ["Read it", "“what is your volume?”, “what is your max volume?”"],
-    ["Change it", "“set the volume to 80”, “turn the volume up” (never above the Max volume cap)"]
+    ["Change it", "“set the volume to 80”, “turn the volume up” (100 is full volume)"]
   ]],
   ["Faces", [
     ["Show an expression", "“look sad”, “show a happy face”"],
@@ -431,7 +431,7 @@ function fmtValue(def) {
   if (def.kind === "enum") return def.value;
   var unit = def.key.indexOf("_ms") >= 0 || def.key === "turn_ms_per_90" ? " ms"
     : def.key === "mic_gain_db" ? " dB"
-    : def.key.indexOf("speed") >= 0 || def.key === "max_volume" ? "%"
+    : def.key.indexOf("speed") >= 0 ? "%"
     : def.key === "idle_clock_min" ? " min"
     : "";
   return def.value + unit;
@@ -744,7 +744,7 @@ document.getElementById("sleepGo").addEventListener("click", function () {
 });
 
 // Volume card: the speaker plays at the lower of the requested volume (this slider, or "turn the volume up")
-// and the Max volume cap from the Audio settings, so show both instead of leaving the cap to look like the volume.
+// and the night-mode limit (quiet hours), so say so when night mode holds the volume down.
 var volDragging = false, volTimer = null;
 function renderVolume(s) {
   var card = document.getElementById("volume");
@@ -753,8 +753,8 @@ function renderVolume(s) {
   if (!volDragging) slider.value = s.volume_requested;
   document.getElementById("volVal").textContent = s.volume + "%";
   document.getElementById("volHelp").textContent = s.volume_requested > s.volume_cap
-    ? "Asked for " + s.volume_requested + "%, but capped at " + s.volume_cap + "% by Max volume (Audio and wake word settings)."
-    : "Max volume cap: " + s.volume_cap + "% (Audio and wake word settings).";
+    ? "Asked for " + s.volume_requested + "%, but night mode (quiet hours) limits it to " + s.volume_cap + "%."
+    : "100% is full volume.";
 }
 (function () {
   var slider = document.getElementById("volSlider");

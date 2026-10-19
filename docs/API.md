@@ -46,7 +46,7 @@ deep sleep. Replies are `application/json` unless noted. `<ip>` is the robot's a
 | `heap_largest_kb` | Largest free block of internal memory |
 | `rssi` | WiFi signal in dBm |
 | `server`, `server_custom` | The voice server's OTA URL in use, and whether it is an own server (`true`) or the built-in default cloud (`false`) |
-| `volume`, `volume_requested`, `volume_cap` | What the speaker plays at, what was asked for, and the `max_volume` cap. `volume` = the lower of the other two |
+| `volume`, `volume_requested`, `volume_cap` | What the speaker plays at, what was asked for, and the limit in force (100, or 40 during quiet hours). `volume` = the lower of the other two |
 | `panel_url` | Address of the Jarvis backend control panel (`http://<server host>:8090/`) when an own server is set, otherwise `""`. The settings page shows an "Open Jarvis backend" button for it |
 
 Older firmware may leave out newer fields (`cpu_load`, `fps`, `heap_largest_kb`, `audio_*`, `camera_*`,
@@ -114,5 +114,5 @@ refused value gives `{"ok": false, "message": "<reason>"}`, a malformed body HTT
 ## POST /api/volume?value=0..100
 
 Sets the requested speaker volume (saved; the same value "turn the volume up" changes). The speaker plays at the lower of
-this and the `max_volume` setting, so the reply tells you what it works out to:
+this and the night-mode limit (quiet hours), so the reply tells you what it works out to:
 `{"ok": true, "volume_requested": 90, "volume": 78, "volume_cap": 78}`. A value outside 0..100 gives HTTP 400.

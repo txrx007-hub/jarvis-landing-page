@@ -31,7 +31,6 @@ DEFAULT_SETTINGS = [
     {"key": "soft_start_ms", "kind": "int", "help": "ramp-up time that limits current spikes", "min": 0, "max": 1000, "step": 10, "value": 200},
     {"key": "mic_gain_db", "kind": "int", "help": "software microphone gain in dB", "min": 0, "max": 24, "step": 1, "value": 18},
     {"key": "wake_threshold", "kind": "hundredths", "help": "wake word threshold, lower wakes more easily", "min": 0.5, "max": 0.95, "step": 0.01, "value": 0.52},
-    {"key": "max_volume", "kind": "int", "help": "speaker volume cap (brownout protection)", "min": 30, "max": 100, "step": 1, "value": 80},
     {"key": "wake_chirp", "kind": "bool", "help": "short chirp right after the wake word", "value": True},
     {"key": "idle_clock_min", "kind": "int", "help": "minutes of idle before the clock shows", "min": 0, "max": 60, "step": 1, "value": 5},
     {"key": "quiet_start", "kind": "time", "help": "night mode start, HH:MM or off", "value": "22:30"},
@@ -75,7 +74,7 @@ function openGroup(title){var b=Array.prototype.find.call(document.querySelector
 
 
 def volume_cap():
-    return next((s["value"] for s in STATE["settings"] if s["key"] == "max_volume"), 80)
+    return 100  # no cap any more (night mode would lower it)
 
 
 def volume_requested():
