@@ -22,6 +22,7 @@
     --card: #101f22;
     --card-border: #1c3236;
     --accent: #20e0e0;
+    --instant: #ffb86b;
     --text: #e8f6f5;
     --muted: #8fb9b6;
     --danger: #ff8a8a;
@@ -38,6 +39,7 @@
     --card: #ffffff;
     --card-border: #c9dcdc;
     --accent: #0a8f95;
+    --instant: #b3560a;
     --text: #12292b;
     --muted: #55777a;
     --danger: #c0392b;
@@ -140,6 +142,11 @@
   #commands ul { margin: 0; padding-left: 18px; }
   #commands li { margin-bottom: 5px; font-size: 14px; }
   #commands .say { color: var(--muted); font-style: italic; }
+  #commands .card.instant { border-left: 3px solid var(--instant); }
+  #commands .card.instant h3 { color: var(--instant); }
+  #commands .legend { font-size: 13px; color: var(--muted); margin: 0 0 8px; display: flex; flex-direction: column; gap: 4px; }
+  #commands .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; background: var(--accent); }
+  #commands .legend i.instant { background: var(--instant); }
   #remote { display: none; margin-top: 14px; }
   .pad {
     display: grid; grid-template-columns: repeat(3, 76px); grid-template-rows: repeat(3, 76px);
@@ -390,15 +397,43 @@ var VOICE_COMMANDS = [
   ]],
   ["Built into upstream", [
     ["Volume, photo, status, theme", "“turn the volume up”, “take a photo”, “switch to dark theme”"]
-  ]]
+  ]],
+  // Instant commands (third value true): done by the own backend before the brain; shown in their own colour
+  ["Instant: stop and drive", [
+    ["Stop", "“stop”, “halt”, “freeze”"],
+    ["Drive", "“go forward”, “go back”, “go forward for 3 seconds”"],
+    ["Turn", "“turn left”, “turn right”, “turn around”"],
+    ["Dance", "“dance”"]
+  ], true],
+  ["Instant: sound and screen", [
+    ["Volume", "“volume 50”, “volume up”, “volume down”, “louder”, “full volume”"],
+    ["Theme", "“dark mode”, “light mode”"],
+    ["Brightness", "“brightness 30”"]
+  ], true],
+  ["Instant: time and timers", [
+    ["Time and date", "“what time is it?”, “what day is it?”"],
+    ["Timer", "“set a timer for 5 minutes”, “cancel all timers”"]
+  ], true],
+  ["Instant: moods", [
+    ["Mood", "“be cheerful”, “be calm”, “be serious”, “be dry”, “back to normal”"]
+  ], true],
+  ["Instant: explore and briefing", [
+    ["Explore", "“explore the room” (looks around, steps forward, looks again, then tells you what it found)"],
+    ["Briefing", "“good morning” (weather, timers, notes and news on the topics set in the backend)"],
+    ["In Dutch too", "“vooruit”, “hoe laat is het?”, “zet een timer op 10 minuten”, “wees kalm”, “goedemorgen”"]
+  ], true]
 ];
 
 function buildCommands() {
   var container = document.getElementById("commands");
   container.innerHTML = "";
+  var legend = document.createElement("div");
+  legend.className = "legend";
+  legend.innerHTML = '<span><i></i>Original commands: understood by the brain, work with any server.</span><span><i class="instant"></i>Instant commands: only with your own server (Voice server card). Done at once, no brain, no waiting; they keep working when the brain is down.</span>';
+  container.appendChild(legend);
   VOICE_COMMANDS.forEach(function (group) {
     var card = document.createElement("div");
-    card.className = "card";
+    card.className = group[2] ? "card instant" : "card";
     var h3 = document.createElement("h3");
     h3.textContent = group[0];
     card.appendChild(h3);
