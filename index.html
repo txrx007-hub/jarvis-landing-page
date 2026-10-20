@@ -23,6 +23,7 @@
     --card-border: #1c3236;
     --accent: #20e0e0;
     --instant: #ffb86b;
+    --ha: #b69cff;
     --text: #e8f6f5;
     --muted: #8fb9b6;
     --danger: #ff8a8a;
@@ -40,6 +41,7 @@
     --card-border: #c9dcdc;
     --accent: #0a8f95;
     --instant: #b3560a;
+    --ha: #6b46c1;
     --text: #12292b;
     --muted: #55777a;
     --danger: #c0392b;
@@ -144,9 +146,12 @@
   #commands .say { color: var(--muted); font-style: italic; }
   #commands .card.instant { border-left: 3px solid var(--instant); }
   #commands .card.instant h3 { color: var(--instant); }
+  #commands .card.ha { border-left: 3px solid var(--ha); }
+  #commands .card.ha h3 { color: var(--ha); }
   #commands .legend { font-size: 13px; color: var(--muted); margin: 0 0 8px; display: flex; flex-direction: column; gap: 4px; }
   #commands .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; background: var(--accent); }
   #commands .legend i.instant { background: var(--instant); }
+  #commands .legend i.ha { background: var(--ha); }
   #remote { display: none; margin-top: 14px; }
   .pad {
     display: grid; grid-template-columns: repeat(3, 76px); grid-template-rows: repeat(3, 76px);
@@ -429,19 +434,51 @@ var VOICE_COMMANDS = [
     ["Explore", "“explore the room” (looks around, steps forward, looks again, then tells you what it found)"],
     ["Briefing", "“good morning” (weather, timers, notes and news on the topics set in the backend)"],
     ["In Dutch too", "“vooruit”, “hoe laat is het?”, “zet een timer op 10 minuten”, “wees kalm”, “goedemorgen”"]
-  ], true]
+  ], true],
+  // Home Assistant (third value "ha"): listed only while the backend reports that Home Assistant works (see loadHaStatus)
+  ["Home: lights and switches", [
+    ["On and off", "“turn off the living room light”, “turn on the tv”, “switch off the fan”, “woonkamer lamp aan”, “doe de schuur uit”"],
+    ["Brightness", "“dim the game room to 40”, “zet de lamp op 30 procent”"],
+    ["Whole rooms", "“turn off all lights in the living room”, “lights off” (asks first when it is more than five)"]
+  ], "ha"],
+  ["Home: scenes, scripts and heating", [
+    ["Scenes and scripts", "“start the netflix scene”, “run the goodnight script”, “zet de disco scene aan”"],
+    ["Heating", "“set the AC livingroom to 21”, “zet de airco kantoor op 20”, “make it warmer” (with two thermostats it asks which one)"],
+    ["Blinds", "“close the blinds” (asks for a yes first)"]
+  ], "ha"],
+  ["Home: questions", [
+    ["State", "“is the living room light on?”, “which lights are on?”, “what is the temperature in the living room?”"],
+    ["Anything else", "“make the lights cosy”: the brain picks the Home Assistant action itself"],
+    ["Never", "locks, alarms and garage doors: Jarvis refuses"]
+  ], "ha"]
 ];
 
+var haOk = false, haNext = 0;
+// Does Home Assistant work from the backend? Asked of the backend (a script include, like the PIN): the Home Assistant commands are listed only while it does.
+function loadHaStatus() {
+  var set = function (ok) { if (ok !== haOk) { haOk = ok; buildCommands(); } };
+  if (!panelUrl) { set(false); return; }
+  if (Date.now() < haNext) return;
+  haNext = Date.now() + 120000;
+  window.JARVIS_HA = null;
+  var s = document.createElement("script");
+  s.src = panelUrl + "ha.js?" + Date.now();
+  s.onload = function () { set(!!(window.JARVIS_HA && window.JARVIS_HA.ok)); s.remove(); };
+  s.onerror = function () { haNext = Date.now() + 30000; set(false); s.remove(); };
+  document.head.appendChild(s);
+}
 function buildCommands() {
   var container = document.getElementById("commands");
   container.innerHTML = "";
   var legend = document.createElement("div");
   legend.className = "legend";
-  legend.innerHTML = '<span><i></i>Original commands: understood by the brain, work with any server.</span><span><i class="instant"></i>Instant commands: only with your own server (Voice server card). Done at once, no brain, no waiting; they keep working when the brain is down.</span>';
+  legend.innerHTML = '<span><i></i>Original commands: understood by the brain, work with any server.</span><span><i class="instant"></i>Instant commands: only with your own server (Voice server card). Done at once, no brain, no waiting; they keep working when the brain is down.</span>' +
+    (haOk ? '<span><i class="ha"></i>Home commands: only while your Home Assistant answers (Home Assistant card in the backend).</span>' : "");
   container.appendChild(legend);
   VOICE_COMMANDS.forEach(function (group) {
+    if (group[2] === "ha" && !haOk) return;
     var card = document.createElement("div");
-    card.className = group[2] ? "card instant" : "card";
+    card.className = group[2] === "ha" ? "card ha" : (group[2] ? "card instant" : "card");
     var h3 = document.createElement("h3");
     h3.textContent = group[0];
     card.appendChild(h3);
@@ -825,6 +862,7 @@ function renderServer(s) {
   panelUrl = own && s.panel_url ? s.panel_url : "";
   document.getElementById("panelBtn").style.display = panelUrl ? "block" : "none";
   loadPanelPin();
+  loadHaStatus();
   var ip = document.getElementById("serverIp");
   if (own && m && document.activeElement !== ip && !ip.value) ip.value = m[1].replace(/:8003$/, "");
 }
