@@ -24,6 +24,7 @@
     --accent: #20e0e0;
     --instant: #ffb86b;
     --ha: #b69cff;
+    --music: #ff8fb8;
     --text: #e8f6f5;
     --muted: #8fb9b6;
     --danger: #ff8a8a;
@@ -42,6 +43,7 @@
     --accent: #0a8f95;
     --instant: #b3560a;
     --ha: #6b46c1;
+    --music: #c2336f;
     --text: #12292b;
     --muted: #55777a;
     --danger: #c0392b;
@@ -148,10 +150,15 @@
   #commands .card.instant h3 { color: var(--instant); }
   #commands .card.ha { border-left: 3px solid var(--ha); }
   #commands .card.ha h3 { color: var(--ha); }
+  #commands .card.music { border-left: 3px solid var(--music); }
+  #commands .card.music h3 { color: var(--music); }
   #commands .legend { font-size: 13px; color: var(--muted); margin: 0 0 8px; display: flex; flex-direction: column; gap: 4px; }
   #commands .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; background: var(--accent); }
   #commands .legend i.instant { background: var(--instant); }
   #commands .legend i.ha { background: var(--ha); }
+  #commands .legend i.music { background: var(--music); }
+  #music { display: none; margin-top: 10px; }
+  #music button { margin-top: 10px; width: 100%; }
   #remote { display: none; margin-top: 14px; }
   .pad {
     display: grid; grid-template-columns: repeat(3, 76px); grid-template-rows: repeat(3, 76px);
@@ -264,6 +271,10 @@
     <button id="commandsToggle" class="secondary">Voice commands</button>
     <button id="remoteToggle" class="secondary">Remote control</button>
     <button id="cameraBtn" class="secondary">Camera</button>
+  </div>
+  <div id="music" class="card">
+    <div class="prow"><b>Music</b><span class="pstate" id="musicNow">Nothing playing</span></div>
+    <button id="musicStop" class="secondary">Stop</button>
   </div>
   <div id="camera" class="card">
     <img id="camImg" alt="Photo from the robot's camera">
@@ -435,6 +446,15 @@ var VOICE_COMMANDS = [
     ["Briefing", "“good morning” (weather, timers, notes and news on the topics set in the backend)"],
     ["In Dutch too", "“vooruit”, “hoe laat is het?”, “zet een timer op 10 minuten”, “wees kalm”, “goedemorgen”"]
   ], true],
+  ["Music: songs from your music folder", [
+    ["Play", "“play something random”, “play a song by Queen”, “play Bohemian Rhapsody”, “speel een nummer van Abba” (30 seconds of the song)"],
+    ["Control", "“next song”, “stop the music”, “what is this song?”, or the Stop button on this page"]
+  ], "music"],
+  ["Music: radio and podcasts", [
+    ["Radio", "“play Radio 538”, “play jazz radio”, “put on NPO Radio 2”, “speel Q-music” (plays until you stop it)"],
+    ["Podcasts", "“play the latest episode of Huberman Lab”, “play podcast The Daily”"],
+    ["Stop", "“stop the radio”, “stop”, or the Stop button on this page"]
+  ], "music"],
   // Home Assistant (third value "ha"): listed only while the backend reports that Home Assistant works (see loadHaStatus)
   ["Home: lights and switches", [
     ["On and off", "“turn off the living room light”, “turn on the tv”, “switch off the fan”, “woonkamer lamp aan”, “doe de schuur uit”"],
@@ -453,6 +473,27 @@ var VOICE_COMMANDS = [
   ], "ha"]
 ];
 
+var musicOn = false, musicNext = 0;
+// What plays? The backend's music player says so (a script include, like ha.js): the Music card with Stop shows while it is on. Asked every 5 seconds.
+function loadMusicStatus() {
+  var card = document.getElementById("music");
+  if (!panelUrl) { if (musicOn) { musicOn = false; buildCommands(); } card.style.display = "none"; return; }
+  if (Date.now() < musicNext) return;
+  musicNext = Date.now() + 5000;
+  window.JARVIS_MUSIC = null;
+  var s = document.createElement("script");
+  s.src = panelUrl + "music.js?" + Date.now();
+  s.onload = function () {
+    var m = window.JARVIS_MUSIC || {};
+    var on = !!m.on;
+    if (on !== musicOn) { musicOn = on; buildCommands(); }
+    card.style.display = on ? "block" : "none";
+    document.getElementById("musicNow").textContent = m.now && m.now.title ? "Playing: " + m.now.title + (m.now.artist ? " - " + m.now.artist : "") : "Nothing playing";
+    s.remove();
+  };
+  s.onerror = function () { musicNext = Date.now() + 30000; if (musicOn) { musicOn = false; buildCommands(); } card.style.display = "none"; s.remove(); };
+  document.head.appendChild(s);
+}
 var haOk = false, haNext = 0;
 // Does Home Assistant work from the backend? Asked of the backend (a script include, like the PIN): the Home Assistant commands are listed only while it does.
 function loadHaStatus() {
@@ -473,12 +514,14 @@ function buildCommands() {
   var legend = document.createElement("div");
   legend.className = "legend";
   legend.innerHTML = '<span><i></i>Original commands: understood by the brain, work with any server.</span><span><i class="instant"></i>Instant commands: only with your own server (Voice server card). Done at once, no brain, no waiting; they keep working when the brain is down.</span>' +
+    (musicOn ? '<span><i class="music"></i>Music commands: only while the backend\'s music player is on (Music card in the backend).</span>' : "") +
     (haOk ? '<span><i class="ha"></i>Home commands: only while your Home Assistant answers (Home Assistant card in the backend).</span>' : "");
   container.appendChild(legend);
   VOICE_COMMANDS.forEach(function (group) {
     if (group[2] === "ha" && !haOk) return;
+    if (group[2] === "music" && !musicOn) return;
     var card = document.createElement("div");
-    card.className = group[2] === "ha" ? "card ha" : (group[2] ? "card instant" : "card");
+    card.className = group[2] === "ha" ? "card ha" : (group[2] === "music" ? "card music" : (group[2] ? "card instant" : "card"));
     var h3 = document.createElement("h3");
     h3.textContent = group[0];
     card.appendChild(h3);
@@ -863,6 +906,7 @@ function renderServer(s) {
   document.getElementById("panelBtn").style.display = panelUrl ? "block" : "none";
   loadPanelPin();
   loadHaStatus();
+  loadMusicStatus();
   var ip = document.getElementById("serverIp");
   if (own && m && document.activeElement !== ip && !ip.value) ip.value = m[1].replace(/:8003$/, "");
 }
@@ -999,6 +1043,10 @@ document.addEventListener("keyup", function (e) {
 });
 window.addEventListener("blur", releaseAll);
 document.addEventListener("visibilitychange", function () { if (document.hidden) releaseAll(); });
+// Stop: ends a song, radio station or podcast at once (the robot stops its sound and tells the server).
+document.getElementById("musicStop").addEventListener("click", function () {
+  fetch("/api/stop", { method: "POST", cache: "no-store" }).then(function () { musicNext = 0; }).catch(function () {});
+});
 // Camera: one picture from the robot's camera, shown in a small window under the button (it stays until the next one). Nothing is analysed or sent anywhere.
 var cameraBtn = document.getElementById("cameraBtn");
 var camCard = document.getElementById("camera");
