@@ -42,7 +42,7 @@ def main():
     import mock_robot
 
     os.makedirs(OUT, exist_ok=True)
-    server = subprocess.Popen([sys.executable, os.path.join(HERE, "mock_robot.py"), str(PORT)],
+    server = subprocess.Popen([sys.executable, os.path.join(HERE, "mock_robot.py"), str(PORT), "own"],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(1.2)
     try:

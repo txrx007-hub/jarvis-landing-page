@@ -13,6 +13,13 @@ libraries, no internet needed), and it talks to the robot through a small JSON A
 | <img src="docs/screenshots/landing-top-dark.png" width="260"> | <img src="docs/screenshots/landing-remote-dark.png" width="260"> | <img src="docs/screenshots/landing-settings-dark.png" width="260"> |
 | <img src="docs/screenshots/landing-power-light.png" width="260"> | <img src="docs/screenshots/landing-voice-light.png" width="260"> | <img src="docs/screenshots/landing-settings-light.png" width="260"> |
 
+With an own backend (Voice server card) the page also shows the backend's **Music** card (title, Stop, Next) while its music player is on, and the music, radio and
+Home Assistant command lists (each in its own colour):
+
+| Music card |
+|---|
+| <img src="docs/screenshots/landing-music-dark.png" width="260"> |
+
 (Screenshots come from the fake robot in `mock/`, with made-up data. The page follows the phone's dark or
 light setting; the slider at the bottom right switches it.)
 

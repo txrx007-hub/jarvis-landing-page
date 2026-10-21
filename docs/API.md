@@ -20,6 +20,8 @@ deep sleep. Replies are `application/json` unless noted. `<ip>` is the robot's a
 | POST | `/api/power` | Nap, wake up, deep sleep |
 | POST | `/api/volume` | Set the speaker volume (the requested volume; the cap from the settings still applies) |
 | POST | `/api/server` | Choose the voice server: the xiaozhi.me cloud or an own server on the LAN |
+| POST | `/api/stop` | Stop what Jarvis is saying or playing (a song, a radio stream) at once; the page's Stop button |
+| POST | `/api/photo` | One JPEG from the camera (`503` with a text reason when there is no camera, or while napping); the page's Camera button |
 
 ## GET /api/status
 

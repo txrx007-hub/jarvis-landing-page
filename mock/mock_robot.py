@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A fake Jarvis robot, so the landing page (and the Android app) can be developed without hardware.
 
-    python mock/mock_robot.py [port]        # default port 8080
+    python mock/mock_robot.py [port] [own]  # default port 8080; "own": the robot uses an own backend (and this fake plays that backend's panel, so the Music card shows)
     open http://127.0.0.1:8080/
 
 Serves ../index.html and the same /api/* endpoints as the firmware (see docs/API.md). Settings you
@@ -43,7 +43,7 @@ DEFAULT_SETTINGS = [
 
 DEFAULT_SERVER = "https://api.example.invalid/xiaozhi/ota/"  # stands in for the built-in cloud URL
 STATE = {"settings": copy.deepcopy(DEFAULT_SETTINGS), "napping": False, "started": time.time(), "drive": (0, 0, 0.0),
-         "server": ""}  # "" = built-in default (cloud)
+         "server": "", "playing": True}  # "" = built-in default (cloud)
 
 
 def private_host(host):
@@ -65,6 +65,7 @@ SHOTS = {
     "settings-dark": ("setTheme('dark'); " + HIDE_TOP + " openGroup('Motors'); openGroup('Audio and wake word');", 1180),
     "settings-light": ("setTheme('light'); " + HIDE_TOP + " openGroup('Motors'); openGroup('Screen and quiet hours');", 1180),
     "voice-light": ("setTheme('light'); $('commandsToggle').click();", 1350),
+    "music-dark": ("setTheme('dark'); ['info','power','server'].forEach(function(i){$(i).style.display='none';}); document.querySelector('.toggles').style.display='none';", 520),
 }
 SHOT_PRELUDE = """
 function $(id){return document.getElementById(id);}
@@ -81,7 +82,7 @@ def volume_requested():
     return STATE.get("volume", 70)
 
 
-def status():
+def status(host=""):
     s = STATE
     return {
         "board": "wall-e-xiao/2.5.0", "board_name": "ESP32 S3 Sense", "camera_detected": True, "camera_sensor": "OV3660",
@@ -92,7 +93,8 @@ def status():
         "ram_free_kb": 71, "ram_total_kb": 399, "psram_free_kb": 3300, "psram_total_kb": 8192,
         "server": s["server"] or DEFAULT_SERVER, "server_custom": bool(s["server"]),
         "volume": min(volume_requested(), volume_cap()), "volume_requested": volume_requested(), "volume_cap": volume_cap(),
-        "panel_url": ("http://%s:8090/" % s["server"].split("://")[1].split("/")[0].split(":")[0]) if s["server"] else "",
+        # the real robot points at the backend's control panel; the fake one plays that panel too (see the /music.js and /ha.js routes below)
+        "panel_url": ("http://%s/" % host) if host else "",
     }
 
 
@@ -119,7 +121,14 @@ class Handler(BaseHTTPRequestHandler):
                 html = html.replace("</body>", script + "</body>")
             self._send(html, "text/html; charset=utf-8")
         elif url.path == "/api/status":
-            self._send(json.dumps(status()))
+            self._send(json.dumps(status(self.headers.get("Host", ""))))
+        elif url.path in ("/music.js", "/ha.js", "/pin.js", "/music-do.js"):   # what the backend's control panel would answer (made-up song)
+            now = {"title": "Sunrise Boulevard", "artist": "Neon Harbour"} if STATE["playing"] else None
+            body = {"/music.js": "window.JARVIS_MUSIC = %s;" % json.dumps({"on": True, "now": now}),
+                    "/ha.js": 'window.JARVIS_HA = {"ok": true};',
+                    "/pin.js": 'window.JARVIS_PANEL_PIN = "";',
+                    "/music-do.js": 'window.JARVIS_MUSIC_DO = {"ok": true};'}[url.path]
+            self._send(body, "application/javascript; charset=utf-8")
         elif url.path == "/api/settings":
             self._send(json.dumps(STATE["settings"]))
         elif url.path == "/api/ping":
@@ -188,6 +197,9 @@ class Handler(BaseHTTPRequestHandler):
                 msg = "Server set to " + STATE["server"]
             self._send(json.dumps({"ok": True, "message": msg + " Restarting in 2 s.", "server": STATE["server"] or DEFAULT_SERVER,
                                    "server_custom": bool(STATE["server"])}))
+        elif url.path == "/api/stop":
+            STATE["playing"] = False
+            self._send(json.dumps({"ok": True}))
         elif url.path == "/api/drive":
             STATE["drive"] = (int(q.get("l", ["0"])[0]), int(q.get("r", ["0"])[0]), time.time())
             self._send(b"", "text/plain")
@@ -212,5 +224,7 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
+    if len(sys.argv) > 2 and sys.argv[2] == "own":   # as if the robot already talks to an own backend: the page then shows the backend's music and command lists
+        STATE["server"] = "http://192.168.1.20:8003/xiaozhi/ota/"
     print("Fake Jarvis on http://127.0.0.1:%d/  (Ctrl+C to stop)" % port)
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
