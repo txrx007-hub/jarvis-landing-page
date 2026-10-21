@@ -292,7 +292,7 @@
   <div class="toggles">
     <button id="commandsToggle" class="secondary" data-hint="Everything you can say to Jarvis">Voice commands</button>
     <button id="remoteToggle" class="secondary" data-hint="Drive the robot: hold an arrow, let go to stop">Remote control</button>
-    <button id="cameraBtn" class="secondary" data-hint="Takes one photo with the robot’s camera; nothing is stored or sent">Camera</button>
+    <button id="cameraBtn" class="secondary" data-hint="Takes one photo with the robot’s camera; with your own backend it is also saved in the dcim folder on the PC">Camera</button>
   </div>
   <div id="music" class="card">
     <div class="prow"><b>Music</b><span class="pstate" id="musicNow">Nothing playing</span></div>
@@ -1076,7 +1076,8 @@ document.getElementById("musicNextBtn").addEventListener("click", function () {
   s.onload = s.onerror = function () { s.remove(); setTimeout(function () { musicNext = 0; }, 2500); };
   document.head.appendChild(s);
 });
-// Camera: one picture from the robot's camera, shown in a small window under the button (it stays until the next one). Nothing is analysed or sent anywhere.
+// Camera: one picture from the robot's camera, shown in a small window under the button (it stays until the next one). Nothing is analysed; with an own backend the picture is
+// handed to its control panel, which keeps it in the dcim folder on the PC.
 var cameraBtn = document.getElementById("cameraBtn");
 var camCard = document.getElementById("camera");
 var camImg = document.getElementById("camImg");
@@ -1098,6 +1099,7 @@ cameraBtn.addEventListener("click", function () {
   }).then(function (blob) {
     if (camUrl) URL.revokeObjectURL(camUrl);
     camUrl = URL.createObjectURL(blob);
+    if (panelUrl) { try { fetch(panelUrl + "api/dcim?src=button", { method: "POST", headers: { "Content-Type": "image/jpeg" }, body: blob }).catch(function () {}); } catch (e) {} }
     camImg.src = camUrl;
     camImg.style.display = "block";
     camMsg.className = "status ok";
