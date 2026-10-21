@@ -135,6 +135,10 @@ class Handler(BaseHTTPRequestHandler):
             self._send(json.dumps(STATE["settings"]))
         elif url.path == "/api/ping":
             self._send(b"", "text/plain")
+        elif url.path == "/api/net":   # made-up traffic that grows like a robot that is talking now and then
+            t = int((time.time() - STATE["started"]) * 1000)
+            pk = t // 20
+            self._send(json.dumps({"tx_pkts": pk * 2, "rx_pkts": pk * 3, "tx_bytes": pk * 2 * 180, "rx_bytes": pk * 3 * 260, "t_ms": t}))
         else:
             self._send(b"not found", "text/plain", 404)
 
