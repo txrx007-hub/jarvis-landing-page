@@ -138,6 +138,15 @@
     margin-top: 24px;
   }
   button:active { background: var(--danger-wash); }
+  /* confirm popup (one style for every hard-to-undo action) and the long-press hint */
+  #confirmBox { border: 1px solid var(--card-border); border-radius: 16px; background: var(--card); color: var(--text); padding: 18px; max-width: 340px; width: calc(100% - 40px); }
+  #confirmBox::backdrop { background: rgba(0,0,0,.55); }
+  #confirmBox p { margin: 0 0 16px; line-height: 1.45; }
+  #confirmBox .crow { display: flex; gap: 10px; }
+  #confirmBox button { margin-top: 0; }
+  #confirmBox button.secondary { color: var(--muted); border-color: var(--card-border); }
+  #hint { display: none; position: absolute; z-index: 30; max-width: 260px; padding: 8px 12px; border-radius: 10px; background: var(--text); color: var(--bg);
+    font-size: 13px; line-height: 1.35; pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.3); }
   button.secondary { border-color: var(--accent); color: var(--accent); margin-top: 0; }
   button.secondary:active { background: var(--accent-wash); }
   #commands { display: none; margin-top: 14px; }
@@ -269,13 +278,13 @@
     </div>
   </div>
   <div class="toggles">
-    <button id="commandsToggle" class="secondary">Voice commands</button>
-    <button id="remoteToggle" class="secondary">Remote control</button>
-    <button id="cameraBtn" class="secondary">Camera</button>
+    <button id="commandsToggle" class="secondary" data-hint="Everything you can say to Jarvis">Voice commands</button>
+    <button id="remoteToggle" class="secondary" data-hint="Drive the robot: hold an arrow, let go to stop">Remote control</button>
+    <button id="cameraBtn" class="secondary" data-hint="Takes one photo with the robot’s camera; nothing is stored or sent">Camera</button>
   </div>
   <div id="music" class="card">
     <div class="prow"><b>Music</b><span class="pstate" id="musicNow">Nothing playing</span></div>
-    <div class="mrow"><button id="musicStop" class="secondary">Stop</button><button id="musicNextBtn" class="secondary">Next</button></div>
+    <div class="mrow"><button id="musicStop" class="secondary" data-hint="Stops the song, radio station or podcast now">Stop</button><button id="musicNextBtn" class="secondary" data-hint="Plays another song from the music folder">Next</button></div>
   </div>
   <div id="camera" class="card">
     <img id="camImg" alt="Photo from the robot's camera">
@@ -285,8 +294,8 @@
   <div id="power" class="card">
     <div class="prow"><b>Power</b><span class="pstate">Status: <span id="powerState">--</span></span></div>
     <div class="pbtns">
-      <button id="napBtn" class="secondary">Nap</button>
-      <button id="deepBtn" class="secondary">Deep sleep&hellip;</button>
+      <button id="napBtn" class="secondary" data-hint="Nap = light standby: the screen goes off, Wi-Fi and the wake word stay on">Nap</button>
+      <button id="deepBtn" class="secondary" data-hint="Wi-Fi and the wake word go off for the time you choose, or until the BOOT button">Deep sleep&hellip;</button>
     </div>
     <div id="sleepPanel">
       <div class="sleep-time">
@@ -316,10 +325,10 @@
     <div class="prow"><b>Voice server</b><span class="pstate"><span id="serverState">--</span></span></div>
     <p class="help" id="serverUrl"></p>
     <div class="pbtns">
-      <button id="serverOwnBtn" class="secondary">Own server&hellip;</button>
-      <button id="serverCloudBtn" class="secondary">Use cloud</button>
+      <button id="serverOwnBtn" class="secondary" data-hint="Use a voice server on your own network instead of the cloud">Own server&hellip;</button>
+      <button id="serverCloudBtn" class="secondary" data-hint="Go back to the xiaozhi.me cloud server">Use cloud</button>
     </div>
-    <button id="panelBtn" class="secondary" style="display:none;margin-top:10px">Open Jarvis backend &#8599;</button>
+    <button id="panelBtn" class="secondary" style="display:none;margin-top:10px" data-hint="Opens the backend control panel on your PC">Open Jarvis backend &#8599;</button>
     <p class="help" id="panelPin" style="display:none">Backend PIN for other devices: <b id="panelPinVal" style="letter-spacing:2px"></b></p>
     <div id="serverPanel">
       <input type="text" id="serverIp" placeholder="192.168.x.y or name.local" autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="url" aria-label="Own server address">
@@ -338,7 +347,7 @@
     <p class="help">Hold an arrow to drive (full speed), let go to stop. Keyboard arrows work too.</p>
   </div>
   <div id="sections">Loading settings...</div>
-  <button id="reset">Reset all to defaults</button>
+  <button id="reset" data-hint="Sets every robot setting back to its default">Reset all to defaults</button>
   <footer>Changes apply and save right away. On your home network only.</footer>
   <label class="theme-switch" title="Dark / light theme">
     <span>Dark</span>
@@ -810,8 +819,9 @@ function loadStatus() {
 }
 
 document.getElementById("reset").addEventListener("click", function () {
-  if (!confirm("Reset every setting to its default? This cannot be undone.")) return;
-  fetch("/api/reset", { method: "POST" }).then(loadSettings);
+  jconfirm("Reset every setting to its default? This cannot be undone.", "Reset", true).then(function (ok) {
+    if (ok) fetch("/api/reset", { method: "POST" }).then(loadSettings);
+  });
 });
 
 // Power card: Nap / Wake up toggles the light standby; Deep sleep asks for hours + minutes first.
@@ -861,10 +871,12 @@ document.getElementById("sleepChips").addEventListener("click", function (e) {
 });
 document.getElementById("sleepGo").addEventListener("click", function () {
   var total = sleepMinutes();
-  if (!confirm("Deep sleep " + sleepText(total) + "? Wi-Fi turns off and this page will stop responding.")) return;
-  document.getElementById("powerState").textContent = "Going to sleep...";
-  powerPost("action=deepsleep&minutes=" + total);
-  sleepPanel.classList.remove("open");
+  jconfirm("Deep sleep " + sleepText(total) + "? Wi-Fi turns off and this page will stop responding.", "Sleep", true).then(function (ok) {
+    if (!ok) return;
+    document.getElementById("powerState").textContent = "Going to sleep...";
+    powerPost("action=deepsleep&minutes=" + total);
+    sleepPanel.classList.remove("open");
+  });
 });
 
 // Volume card: the speaker plays at the lower of the requested volume (this slider, or "turn the volume up")
@@ -947,11 +959,13 @@ function serverPost(value) {
     .catch(function () { return { ok: false, message: "Could not reach Jarvis." }; });
 }
 function serverSwitch(value, question) {
-  if (!confirm(question)) return;
-  serverMsg("Saving...", true);
-  serverPost(value).then(function (r) {
-    serverMsg(r.message || (r.ok ? "Saved." : "Not saved."), !!r.ok);
-    if (r.ok) document.getElementById("serverPanel").classList.remove("open");
+  jconfirm(question, "Save", false).then(function (ok) {
+    if (!ok) return;
+    serverMsg("Saving...", true);
+    serverPost(value).then(function (r) {
+      serverMsg(r.message || (r.ok ? "Saved." : "Not saved."), !!r.ok);
+      if (r.ok) document.getElementById("serverPanel").classList.remove("open");
+    });
   });
 }
 document.getElementById("serverOwnBtn").addEventListener("click", function () {
@@ -1019,15 +1033,58 @@ function updateDrive() {
   driveTimer = setInterval(function () { var c = wheelCommand(); sendDrive(c[0], c[1]); }, 150);
 }
 function releaseAll() { held = {}; updateDrive(); }
+
+// ---- the same touch feel as the app: a short vibration tick on a press (phones that allow it), one confirm popup for everything hard to undo,
+// and a small hint popup when a button with data-hint is pressed and held (the hint also shows as a tooltip on a computer)
+function tick(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
+function jconfirm(question, okLabel, danger) {
+  return new Promise(function (resolve) {
+    var box = document.getElementById("confirmBox"), yes = document.getElementById("confirmYes"), no = document.getElementById("confirmNo");
+    if (!box.showModal) { resolve(window.confirm(question)); return; }   // a very old browser
+    document.getElementById("confirmText").textContent = question;
+    yes.textContent = okLabel || "OK";
+    yes.style.cssText = danger ? "" : "border-color: var(--accent); color: var(--accent);";
+    function done(v) { yes.onclick = no.onclick = box.onclose = null; if (box.open) box.close(); resolve(v); }
+    yes.onclick = function () { tick(20); done(true); };
+    no.onclick = function () { done(false); };
+    box.onclose = function () { done(false); };
+    box.showModal();
+  });
+}
+document.addEventListener("click", function (e) { if (e.target.closest && e.target.closest("button") && !e.target.closest(".pad")) tick(8); });
+document.addEventListener("DOMContentLoaded", function () {   // the hint box sits after this script in the page
+  var tip = document.getElementById("hint"), timer = null, hideTimer = null, shown = false;
+  Array.prototype.forEach.call(document.querySelectorAll("[data-hint]"), function (el) { el.title = el.getAttribute("data-hint"); });
+  function hide() { tip.style.display = "none"; }
+  function show(el) {
+    tip.textContent = el.getAttribute("data-hint");
+    tip.style.display = "block";
+    var r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    var left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), document.documentElement.clientWidth - w - 8);
+    var above = r.top - h - 8 >= 0;
+    tip.style.left = (left + window.scrollX) + "px";
+    tip.style.top = ((above ? r.top - h - 8 : r.bottom + 8) + window.scrollY) + "px";
+    clearTimeout(hideTimer); hideTimer = setTimeout(hide, 2800);
+  }
+  document.addEventListener("pointerdown", function (e) {
+    hide(); shown = false; clearTimeout(timer);
+    var el = e.target.closest ? e.target.closest("[data-hint]") : null;
+    if (!el) return;
+    timer = setTimeout(function () { shown = true; tick(15); show(el); }, 550);
+  });
+  ["pointerup", "pointercancel", "scroll"].forEach(function (t) { document.addEventListener(t, function () { clearTimeout(timer); }, true); });
+  document.addEventListener("click", function (e) { if (shown) { e.stopPropagation(); e.preventDefault(); shown = false; } }, true);   // the press that opened a hint is not a tap
+  document.addEventListener("contextmenu", function (e) { if (e.target.closest && e.target.closest("[data-hint]")) e.preventDefault(); });
+});
 Array.prototype.forEach.call(remotePanel.querySelectorAll(".pad button"), function (btn) {
   var dir = btn.getAttribute("data-dir");
   btn.addEventListener("pointerdown", function (e) {
     e.preventDefault();
     if (btn.setPointerCapture) btn.setPointerCapture(e.pointerId);
-    held[dir] = true; updateDrive();
+    held[dir] = true; updateDrive(); tick(15);
   });
   ["pointerup", "pointercancel", "lostpointercapture"].forEach(function (type) {
-    btn.addEventListener(type, function () { if (held[dir]) { delete held[dir]; updateDrive(); } });
+    btn.addEventListener(type, function () { if (held[dir]) { delete held[dir]; updateDrive(); tick(8); } });
   });
   btn.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 });
@@ -1105,5 +1162,10 @@ loadSettings();
 setInterval(loadStatus, 1000);  // CPU/RAM/PSRAM refresh every second, per request
 setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping request
 </script>
+<dialog id="confirmBox" aria-labelledby="confirmText">
+  <p id="confirmText"></p>
+  <div class="crow"><button type="button" id="confirmNo" class="secondary">Cancel</button><button type="button" id="confirmYes">OK</button></div>
+</dialog>
+<div id="hint" role="tooltip"></div>
 </body>
 </html>
