@@ -49,7 +49,7 @@ deep sleep. Replies are `application/json` unless noted. `<ip>` is the robot's a
 | `rssi` | WiFi signal in dBm |
 | `server`, `server_custom` | The voice server's OTA URL in use, and whether it is an own server (`true`) or the built-in default cloud (`false`) |
 | `volume`, `volume_requested`, `volume_cap` | What the speaker plays at, what was asked for, and the limit in force (100, or 40 during quiet hours). `volume` = the lower of the other two |
-| `panel_url` | Address of the Jarvis backend control panel (`http://<server host>:8090/`) when an own server is set, otherwise `""`. The settings page shows an "Open Jarvis backend" button for it |
+| `panel_url` | Address of the Jarvis backend control panel (`http://<server host>:8090/`) when an own server is set, otherwise `""`. The settings page shows an "Advanced" button for it (next to "Jarvis settings" at the top) |
 
 Older firmware may leave out newer fields (`cpu_load`, `fps`, `heap_largest_kb`, `audio_*`, `camera_*`,
 `board_name`, `power`); clients should treat every field as optional.
