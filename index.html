@@ -158,7 +158,8 @@
   #commands .legend i.ha { background: var(--ha); }
   #commands .legend i.music { background: var(--music); }
   #music { display: none; margin-top: 10px; }
-  #music button { margin-top: 10px; width: 100%; }
+  #music .mrow { display: flex; gap: 10px; margin-top: 10px; }
+  #music button { flex: 1; }
   #remote { display: none; margin-top: 14px; }
   .pad {
     display: grid; grid-template-columns: repeat(3, 76px); grid-template-rows: repeat(3, 76px);
@@ -274,7 +275,7 @@
   </div>
   <div id="music" class="card">
     <div class="prow"><b>Music</b><span class="pstate" id="musicNow">Nothing playing</span></div>
-    <button id="musicStop" class="secondary">Stop</button>
+    <div class="mrow"><button id="musicStop" class="secondary">Stop</button><button id="musicNextBtn" class="secondary">Next</button></div>
   </div>
   <div id="camera" class="card">
     <img id="camImg" alt="Photo from the robot's camera">
@@ -448,7 +449,7 @@ var VOICE_COMMANDS = [
   ], true],
   ["Music: songs from your music folder", [
     ["Play", "“play something random”, “play a song by Queen”, “play Bohemian Rhapsody”, “speel een nummer van Abba” (30 seconds of the song)"],
-    ["Control", "“next song”, “stop the music”, “what is this song?”, or the Stop button on this page"]
+    ["Control", "“next song”, “stop the music”, “what is this song?”, or the Stop and Next buttons on this page"]
   ], "music"],
   ["Music: radio and podcasts", [
     ["Radio", "“play Radio 538”, “play jazz radio”, “put on NPO Radio 2”, “speel Q-music” (plays until you stop it)"],
@@ -1046,6 +1047,14 @@ document.addEventListener("visibilitychange", function () { if (document.hidden)
 // Stop: ends a song, radio station or podcast at once (the robot stops its sound and tells the server).
 document.getElementById("musicStop").addEventListener("click", function () {
   fetch("/api/stop", { method: "POST", cache: "no-store" }).then(function () { musicNext = 0; }).catch(function () {});
+});
+// Next: the backend plays another song (a script include, so no sign-in is needed: the backend accepts it from this page only).
+document.getElementById("musicNextBtn").addEventListener("click", function () {
+  if (!panelUrl) return;
+  var s = document.createElement("script");
+  s.src = panelUrl + "music-do.js?cmd=next&" + Date.now();
+  s.onload = s.onerror = function () { s.remove(); setTimeout(function () { musicNext = 0; }, 2500); };
+  document.head.appendChild(s);
 });
 // Camera: one picture from the robot's camera, shown in a small window under the button (it stays until the next one). Nothing is analysed or sent anywhere.
 var cameraBtn = document.getElementById("cameraBtn");
