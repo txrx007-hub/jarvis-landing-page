@@ -148,6 +148,13 @@
   #hint { display: none; position: absolute; z-index: 30; max-width: 260px; padding: 8px 12px; border-radius: 10px; background: var(--text); color: var(--bg);
     font-size: 13px; line-height: 1.35; pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.3); }
   button.secondary { border-color: var(--accent); color: var(--accent); margin-top: 0; }
+  /* voice commands: one coloured tile per group, a tap opens just that group (the colour is the kind of command) */
+  .ctiles { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .ctile { --c: var(--accent); width: auto; margin-top: 0; padding: 8px 12px; font-size: 14px; border-color: var(--c); color: var(--c); border-radius: 10px; }
+  .ctile.k-instant { --c: var(--instant); } .ctile.k-ha { --c: var(--ha); } .ctile.k-music { --c: var(--music); }
+  .ctile small { opacity: .7; margin-left: 6px; font-size: 12px; }
+  .ctile.on { background: color-mix(in srgb, var(--c) 20%, transparent); font-weight: 600; }
+  .ctile:active { background: color-mix(in srgb, var(--c) 28%, transparent); }
   button.secondary:active { background: var(--accent-wash); }
   #commands { display: none; margin-top: 14px; }
   #commands .card { margin-bottom: 8px; }
@@ -508,38 +515,66 @@ function loadHaStatus() {
   s.onerror = function () { haNext = Date.now() + 30000; set(false); s.remove(); };
   document.head.appendChild(s);
 }
+var cmdSel = "";   // the group that is open ("" = none): the page starts as a row of coloured tiles, a tap opens one group
 function buildCommands() {
   var container = document.getElementById("commands");
   container.innerHTML = "";
+  var groups = VOICE_COMMANDS.filter(function (g) {
+    return !(g[2] === "ha" && !haOk) && !(g[2] === "music" && !musicOn);
+  });
+  if (cmdSel && !groups.some(function (g) { return g[0] === cmdSel; })) cmdSel = "";
+  var kindOf = function (g) { return g[2] === "ha" ? "ha" : (g[2] === "music" ? "music" : (g[2] ? "instant" : "original")); };
+
   var legend = document.createElement("div");
   legend.className = "legend";
-  legend.innerHTML = '<span><i></i>Original commands: understood by the brain, work with any server.</span><span><i class="instant"></i>Instant commands: only with your own server (set in Advanced). Done at once, no brain, no waiting; they keep working when the brain is down.</span>' +
-    (musicOn ? '<span><i class="music"></i>Music commands: only while the backend\'s music player is on (Music card in the backend).</span>' : "") +
-    (haOk ? '<span><i class="ha"></i>Home commands: only while your Home Assistant answers (Home Assistant card in the backend).</span>' : "");
+  legend.innerHTML = '<span><i></i>Original: any server</span><span><i class="instant"></i>Instant: own server, done at once</span>' +
+    (musicOn ? '<span><i class="music"></i>Music: while the music player is on</span>' : "") +
+    (haOk ? '<span><i class="ha"></i>Home: while Home Assistant answers</span>' : "");
   container.appendChild(legend);
-  VOICE_COMMANDS.forEach(function (group) {
-    if (group[2] === "ha" && !haOk) return;
-    if (group[2] === "music" && !musicOn) return;
-    var card = document.createElement("div");
-    card.className = group[2] === "ha" ? "card ha" : (group[2] === "music" ? "card music" : (group[2] ? "card instant" : "card"));
-    var h3 = document.createElement("h3");
-    h3.textContent = group[0];
-    card.appendChild(h3);
-    var ul = document.createElement("ul");
-    group[1].forEach(function (item) {
-      var li = document.createElement("li");
-      var strong = document.createElement("span");
-      strong.textContent = item[0] + " — ";
-      var say = document.createElement("span");
-      say.className = "say";
-      say.textContent = item[1];
-      li.appendChild(strong);
-      li.appendChild(say);
-      ul.appendChild(li);
-    });
-    card.appendChild(ul);
-    container.appendChild(card);
+
+  var tiles = document.createElement("div");
+  tiles.className = "ctiles";
+  groups.forEach(function (group) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "ctile k-" + kindOf(group) + (group[0] === cmdSel ? " on" : "");
+    b.setAttribute("aria-pressed", group[0] === cmdSel ? "true" : "false");
+    b.textContent = group[0].replace(/^Instant: /, "");   // the orange colour already says "instant"
+    var n = document.createElement("small");
+    n.textContent = group[1].length;
+    b.appendChild(n);
+    b.addEventListener("click", function () { cmdSel = cmdSel === group[0] ? "" : group[0]; buildCommands(); });
+    tiles.appendChild(b);
   });
+  container.appendChild(tiles);
+
+  var open = groups.filter(function (g) { return g[0] === cmdSel; })[0];
+  if (!open) {
+    var hint = document.createElement("p");
+    hint.className = "help";
+    hint.textContent = "Tap a group to see what you can say.";
+    container.appendChild(hint);
+    return;
+  }
+  var card = document.createElement("div");
+  card.className = "card " + (kindOf(open) === "original" ? "" : kindOf(open));
+  var h3 = document.createElement("h3");
+  h3.textContent = open[0];
+  card.appendChild(h3);
+  var ul = document.createElement("ul");
+  open[1].forEach(function (item) {
+    var li = document.createElement("li");
+    var strong = document.createElement("span");
+    strong.textContent = item[0] + " \u2014 ";
+    var say = document.createElement("span");
+    say.className = "say";
+    say.textContent = item[1];
+    li.appendChild(strong);
+    li.appendChild(say);
+    ul.appendChild(li);
+  });
+  card.appendChild(ul);
+  container.appendChild(card);
 }
 
 function labelFor(key) {

@@ -66,7 +66,7 @@ SHOTS = {
     "power-light": ("setTheme('light'); $('deepBtn').click(); $('sleepH').value='3'; $('sleepM').value='25'; $('sleepH').dispatchEvent(new Event('input'));", 1000),
     "settings-dark": ("setTheme('dark'); " + HIDE_TOP + " openGroup('Motors'); openGroup('Audio and wake word');", 1180),
     "settings-light": ("setTheme('light'); " + HIDE_TOP + " openGroup('Motors'); openGroup('Screen and quiet hours');", 1180),
-    "voice-light": ("setTheme('light'); $('commandsToggle').click();", 1350),
+    "voice-light": ("setTheme('light'); $('commandsToggle').click(); var t = document.querySelectorAll('.ctile'); if (t.length > 1) t[1].click();", 1000),
     "music-dark": ("setTheme('dark'); ['info','power','server'].forEach(function(i){$(i).style.display='none';}); document.querySelector('.toggles').style.display='none';", 520),
 }
 SHOT_PRELUDE = """
