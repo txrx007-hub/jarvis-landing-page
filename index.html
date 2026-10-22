@@ -294,7 +294,7 @@
       <div class="irow"><span class="k">RAM</span><span class="v" id="iRam"></span></div>
       <div class="irow"><span class="k">HEAP</span><span class="v" id="iHeap"></span></div>
       <div class="irow"><span class="k">WIFI</span><span class="v" id="iWifi"></span></div>
-      <div class="irow"><span class="k">TX / RX</span><span class="v" id="iNet"><span style="color:var(--tx)">Tx --</span> · <span style="color:var(--rx)">Rx --</span></span></div>
+      <div class="irow"><span class="k">TX / RX</span><span class="v" id="iNet"><span style="color:var(--tx)">--</span> · <span style="color:var(--rx)">--</span></span></div>
       <div class="irow"><span class="k">AUDIO</span><span class="v" id="iAudio"></span></div>
     </div>
   </div>
@@ -1212,7 +1212,7 @@ function pollNet() {
     var el = document.getElementById("iNet");
     if (netPrev && n.t_ms > netPrev.t_ms) {
       var s = (n.t_ms - netPrev.t_ms) / 1000, tx = (n.tx_pkts - netPrev.tx_pkts) / s, rx = (n.rx_pkts - netPrev.rx_pkts) / s;
-      if (tx >= 0 && rx >= 0) el.innerHTML = '<span style="color:var(--tx)">Tx ' + tx.toFixed(1) + ' p/s</span> · <span style="color:var(--rx)">Rx ' + rx.toFixed(1) + " p/s</span>";
+      if (tx >= 0 && rx >= 0) el.innerHTML = '<span style="color:var(--tx)">' + tx.toFixed(1) + ' p/s</span> · <span style="color:var(--rx)">' + rx.toFixed(1) + " p/s</span>";   // sent (Tx) · received (Rx)
     }
     netPrev = n;
   }).catch(function () { netPrev = null; }).then(function () { netBusy = false; });
