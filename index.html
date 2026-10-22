@@ -23,6 +23,8 @@
     --card-border: #1c3236;
     --accent: #20e0e0;
     --instant: #ffb86b;
+    --tx: #ffb86b;
+    --rx: #5ec8ff;
     --ha: #b69cff;
     --music: #ff8fb8;
     --text: #e8f6f5;
@@ -42,6 +44,8 @@
     --card-border: #c9dcdc;
     --accent: #0a8f95;
     --instant: #b3560a;
+    --tx: #b3560a;
+    --rx: #0f6fa8;
     --ha: #6b46c1;
     --music: #c2336f;
     --text: #12292b;
@@ -275,6 +279,7 @@
   <div id="info">
     <div class="icol">
       <div class="irow"><span class="k">Board</span><span class="v" id="iBoard"></span></div>
+      <div class="irow" id="iTempRow" style="display:none"><span class="k">Chip temperature</span><span class="v" id="iTemp"></span></div>
       <div class="irow"><span class="k">Camera detected</span><span class="v" id="iCamera"></span></div>
       <div class="irow"><span class="k">MAC address</span><span class="v" id="iMac"></span></div>
       <div class="irow"><span class="k">Ping</span><span class="v" id="iPing">-- ms</span></div>
@@ -289,6 +294,7 @@
       <div class="irow"><span class="k">RAM</span><span class="v" id="iRam"></span></div>
       <div class="irow"><span class="k">HEAP</span><span class="v" id="iHeap"></span></div>
       <div class="irow"><span class="k">WIFI</span><span class="v" id="iWifi"></span></div>
+      <div class="irow"><span class="k">TX / RX</span><span class="v" id="iNet"><span style="color:var(--tx)">Tx --</span> · <span style="color:var(--rx)">Rx --</span></span></div>
       <div class="irow"><span class="k">AUDIO</span><span class="v" id="iAudio"></span></div>
     </div>
   </div>
@@ -847,6 +853,9 @@ function loadStatus() {
     $("iUptime", fmtUptime(s.uptime_s || 0));
     $("iFps", s.fps !== undefined ? String(s.fps) : "--");
     $("iCpu", (s.cpu_load !== undefined ? s.cpu_load + "%" : "--") + (s.cpu_mhz ? " · " + s.cpu_mhz + " MHz" : ""));
+    // the chip's own sensor (firmware build 55 and newer): the die runs warmer than the room, about 35-65 °C is normal
+    document.getElementById("iTempRow").style.display = typeof s.chip_temp_c === "number" ? "" : "none";
+    if (typeof s.chip_temp_c === "number") $("iTemp", s.chip_temp_c.toFixed(1) + " °C");
     $("iPsram", ((s.psram_free_kb || 0) / 1024).toFixed(1) + " MB free");
     $("iRam", fmtUsage((s.ram_total_kb || 0) - (s.ram_free_kb || 0), s.ram_total_kb, false));
     $("iHeap", s.heap_largest_kb !== undefined ? s.heap_largest_kb + " KB" : "--");
@@ -1193,6 +1202,22 @@ buildCommands();
 loadStatus();
 loadSettings();
 setInterval(loadStatus, 1000);  // CPU/RAM/PSRAM refresh every second, per request
+// Live Wi-Fi traffic of the robot (packets per second, Tx = sent, Rx = received), worked out from its own counters (/api/net) once a second while this page is visible.
+// The same colours as the backend panel. Asking costs a packet or two itself, which is included in the numbers.
+var netPrev = null, netBusy = false;
+function pollNet() {
+  if (document.hidden || netBusy) return;
+  netBusy = true;
+  fetch("/api/net", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (n) {
+    var el = document.getElementById("iNet");
+    if (netPrev && n.t_ms > netPrev.t_ms) {
+      var s = (n.t_ms - netPrev.t_ms) / 1000, tx = (n.tx_pkts - netPrev.tx_pkts) / s, rx = (n.rx_pkts - netPrev.rx_pkts) / s;
+      if (tx >= 0 && rx >= 0) el.innerHTML = '<span style="color:var(--tx)">Tx ' + tx.toFixed(1) + ' p/s</span> · <span style="color:var(--rx)">Rx ' + rx.toFixed(1) + " p/s</span>";
+    }
+    netPrev = n;
+  }).catch(function () { netPrev = null; }).then(function () { netBusy = false; });
+}
+setInterval(pollNet, 1000);
 setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping request
 </script>
 <dialog id="confirmBox" aria-labelledby="confirmText">
