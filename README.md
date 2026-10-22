@@ -30,8 +30,10 @@ light setting; the slider at the bottom right switches it.)
 - **Power**: Nap / Wake up, and Deep sleep for any hours + minutes (or until the BOOT button), with a confirmation.
 - **Remote control**: four arrows, hold to drive at full speed; two together turn in an arc. The page
   re-sends the command every 150 ms and the robot stops 500 ms after the last one, so a lost connection stops it.
+  **Live view** (button under the arrows) shows what the robot sees while you drive: a new small picture about once a second (nothing is kept, the robot's own screen stays
+  as it is), only while the page is open, stopping by itself after 3 minutes. The pictures are taken in a task of their own, so driving is not held up.
 - **Settings** built from what the robot reports (sliders, switches, dropdowns, time pickers, text),
-  grouped into Motors, Audio and wake word, Screen and quiet hours, Weather, Visualizer, System. Changes
+  grouped into Motors, Audio and wake word, Screen and quiet hours, Weather, Camera, Visualizer, System. Changes
   save the moment you release a control.
 - **Voice commands**: the list of things you can say to the robot.
 - **Dark / light theme** slider, remembered in the browser.

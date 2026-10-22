@@ -192,6 +192,9 @@
   .pad .right { grid-column: 3; grid-row: 2; }
   .pad .down { grid-column: 2; grid-row: 3; }
   #remote .help { text-align: center; }
+  #liveImg { display: none; width: 100%; max-width: 320px; border-radius: 10px; border: 1px solid var(--card-border); margin: 0 auto 8px; }
+  #liveRow { display: flex; justify-content: center; margin-top: 8px; }
+  #liveMsg { text-align: center; margin: 6px 0 0; }
   .toggles { display: flex; flex-wrap: wrap; gap: 10px; }
   .toggles button { flex: 1 1 30%; }
   #camera { display: none; margin-top: 10px; text-align: center; }
@@ -334,6 +337,7 @@
     <p class="help" id="volHelp"></p>
   </div>
   <div id="remote" class="card">
+    <img id="liveImg" alt="Live view from the robot's camera">
     <div class="pad">
       <button class="up" data-dir="up" aria-label="Forward">&#9650;</button>
       <button class="left" data-dir="left" aria-label="Spin left">&#9664;</button>
@@ -341,6 +345,8 @@
       <button class="down" data-dir="down" aria-label="Backward">&#9660;</button>
     </div>
     <p class="help">Hold an arrow to drive (full speed), let go to stop. Keyboard arrows work too.</p>
+    <div id="liveRow"><button id="liveBtn" class="secondary" data-hint="Shows what the robot sees while you drive: a new picture about once a second, only while this page is open (stops after 3 minutes)">Live view</button></div>
+    <p class="status" id="liveMsg"></p>
   </div>
   <div id="sections">Loading settings...</div>
   <button id="reset" data-hint="Sets every robot setting back to its default">Reset all to defaults</button>
@@ -364,6 +370,7 @@ var GROUPS = [
   ["Audio and wake word", ["mic_gain_db", "wake_threshold", "wake_chirp"]],
   ["Screen and quiet hours", ["idle_clock_min", "quiet_start", "quiet_end"]],
   ["Weather", ["weather_city"]],
+  ["Camera", ["camera_brightness"]],
   ["Visualizer", ["visualizer_mode", "music_icon"]],
   ["System", ["log_level"]]
 ];
@@ -371,7 +378,7 @@ var LABELS = {
   motor_max_speed: "Top speed", motor_trim: "Steering trim", turn_ms_per_90: "Turn duration (90°)",
   motor_a_invert: "Right motor direction", motor_b_invert: "Left motor direction", motor_swap: "Swap left/right",
   soft_start_ms: "Soft start ramp", mic_gain_db: "Microphone gain", wake_threshold: "Wake sensitivity",
-  shutter_sound: "Camera shutter sound", wake_chirp: "Wake chirp",
+  shutter_sound: "Camera shutter sound", camera_brightness: "Camera brightness", wake_chirp: "Wake chirp",
   idle_clock_min: "Idle clock after", quiet_start: "Quiet hours start", quiet_end: "Quiet hours end",
   weather_city: "Weather city", visualizer_mode: "Speaking screen effect", music_icon: "Music screen picture", log_level: "Log detail"
 };
@@ -445,6 +452,10 @@ var VOICE_COMMANDS = [
     ["Time and date", "“what time is it?”, “what day is it?”"],
     ["Timer", "“set a timer for 5 minutes”, “cancel all timers”"]
   ], true],
+  ["Instant: notes and macros", [
+    ["Notes", "“make a note: buy filament”, “read my notes”, “what do my notes say about the dishwasher?” (the folder notes/ on the backend)"],
+    ["Macros", "“party time”, “greet the room”, “good night mode”: one phrase runs a list of steps you write in profiles/macros.yaml (say stop to end it)"]
+  ], true],
   ["Instant: moods", [
     ["Mood", "“be cheerful”, “be calm”, “be serious”, “be dry”, “back to normal”"]
   ], true],
@@ -472,6 +483,11 @@ var VOICE_COMMANDS = [
     ["Scenes and scripts", "“start the netflix scene”, “run the goodnight script”, “zet de disco scene aan”"],
     ["Heating", "“set the AC livingroom to 21”, “zet de airco kantoor op 20”, “make it warmer” (with two thermostats it asks which one)"],
     ["Blinds", "“close the blinds” (asks for a yes first)"]
+  ], "ha"],
+  ["Home: shopping list", [
+    ["Add", "“add milk and eggs to the shopping list”, “zet melk op de boodschappenlijst”"],
+    ["Read", "“what is on the shopping list?”, “wat staat er op de boodschappenlijst?”"],
+    ["Remove", "“remove milk from the shopping list”, “haal melk van de boodschappenlijst”"]
   ], "ha"],
   ["Home: questions", [
     ["State", "“is the living room light on?”, “which lights are on?”, “what is the temperature in the living room?”"],
@@ -1115,11 +1131,62 @@ cameraBtn.addEventListener("click", function () {
   });
 });
 
+// Live view (in the remote control card): a new small picture right after the last one arrived (about one a second on a good Wi-Fi), shown above the arrows.
+// Only while this page is open and visible, stops by itself after 3 minutes or after 3 failures in a row. The pictures are not kept anywhere.
+var liveBtn = document.getElementById("liveBtn");
+var liveImg = document.getElementById("liveImg");
+var liveMsg = document.getElementById("liveMsg");
+var liveOn = false, liveStart = 0, liveUrl = null, liveFails = 0, liveTimer = null;
+function liveStop(message) {
+  liveOn = false;
+  clearTimeout(liveTimer);
+  liveBtn.textContent = "Live view";
+  liveMsg.className = message ? "status err" : "status";
+  liveMsg.textContent = message || "";
+}
+function liveNext() {
+  if (!liveOn) return;
+  if (document.hidden) { liveStop(""); return; }
+  if (Date.now() - liveStart > 180000) { liveStop("Live view stopped after 3 minutes. Tap Live view to continue."); return; }
+  var began = Date.now();
+  var ctl = window.AbortController ? new AbortController() : null;
+  var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 8000);
+  fetch("/api/photo?live=1", { method: "POST", signal: ctl ? ctl.signal : undefined }).then(function (r) {
+    if (!r.ok) return r.text().then(function (t) { throw new Error(t || ("error " + r.status)); });
+    return r.blob();
+  }).then(function (blob) {
+    if (!liveOn) return;
+    if (liveUrl) URL.revokeObjectURL(liveUrl);
+    liveUrl = URL.createObjectURL(blob);
+    liveImg.src = liveUrl;
+    liveImg.style.display = "block";
+    liveFails = 0;
+    liveMsg.className = "status ok";
+    liveMsg.textContent = "Live";
+  }).catch(function (e) {
+    liveFails++;
+    var why = e && e.name !== "AbortError" && e.message ? e.message : "no answer from Jarvis";
+    if (/busy/.test(why)) { liveFails--; return; }   // the camera was still busy: just ask again
+    if (liveFails >= 3) liveStop("Live view stopped: " + why);
+  }).then(function () {
+    clearTimeout(timer);
+    if (liveOn) liveTimer = setTimeout(liveNext, Math.max(150, 700 - (Date.now() - began)));
+  });
+}
+liveBtn.addEventListener("click", function () {
+  if (liveOn) { liveStop(""); return; }
+  liveOn = true; liveStart = Date.now(); liveFails = 0;
+  liveBtn.textContent = "Stop live view";
+  liveMsg.className = "status"; liveMsg.textContent = "Starting...";
+  liveNext();
+});
+document.addEventListener("visibilitychange", function () { if (document.hidden && liveOn) liveStop(""); });
+
 remoteToggle.addEventListener("click", function () {
   var open = remotePanel.style.display === "block";
   remotePanel.style.display = open ? "none" : "block";
   remoteToggle.textContent = open ? "Remote control" : "Hide remote";
-  if (open) releaseAll();
+  if (open) { releaseAll(); if (liveOn) liveStop(""); }
 });
 buildCommands();
 

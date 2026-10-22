@@ -21,6 +21,7 @@ from urllib.parse import parse_qs, urlparse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PAGE = os.path.join(HERE, "..", "index.html")
+PHOTO = os.path.join(HERE, "..", "..", "..", "..", "..", "android", "app", "src", "main", "res", "drawable-nodpi", "splash.jpg")   # the app's own splash picture stands in for the camera
 
 DEFAULT_SETTINGS = [
     {"key": "motor_trim", "kind": "int", "help": "wheel balance: raise it if Jarvis drifts left, lower it if it drifts right", "min": -20, "max": 20, "step": 1, "value": 0},
@@ -31,6 +32,7 @@ DEFAULT_SETTINGS = [
     {"key": "soft_start_ms", "kind": "int", "help": "ramp-up time that limits current spikes", "min": 0, "max": 1000, "step": 10, "value": 200},
     {"key": "mic_gain_db", "kind": "int", "help": "software microphone gain in dB", "min": 0, "max": 24, "step": 1, "value": 18},
     {"key": "wake_threshold", "kind": "hundredths", "help": "wake word threshold, lower wakes more easily", "min": 0.5, "max": 0.95, "step": 0.01, "value": 0.52},
+    {"key": "camera_brightness", "kind": "int", "help": "camera exposure target: raise it if photos come out dark, lower it if bright spots wash out (0 = sensor default)", "min": -5, "max": 5, "step": 1, "value": 2},
     {"key": "wake_chirp", "kind": "bool", "help": "short chirp right after the wake word", "value": True},
     {"key": "idle_clock_min", "kind": "int", "help": "minutes of idle before the clock shows", "min": 0, "max": 60, "step": 1, "value": 5},
     {"key": "quiet_start", "kind": "time", "help": "night mode start, HH:MM or off", "value": "22:30"},
@@ -67,6 +69,7 @@ SHOTS = {
     "settings-dark": ("setTheme('dark'); " + HIDE_TOP + " openGroup('Motors'); openGroup('Audio and wake word');", 1180),
     "settings-light": ("setTheme('light'); " + HIDE_TOP + " openGroup('Motors'); openGroup('Screen and quiet hours');", 1180),
     "voice-light": ("setTheme('light'); $('commandsToggle').click(); var t = document.querySelectorAll('.ctile'); if (t.length > 1) t[1].click();", 1000),
+    "live-dark": ("setTheme('dark'); ['info','power'].forEach(function(i){$(i).style.display='none';}); document.querySelector('.toggles').style.display='none'; $('remoteToggle').click(); $('liveBtn').click();", 1250),
     "music-dark": ("setTheme('dark'); ['info','power','server'].forEach(function(i){$(i).style.display='none';}); document.querySelector('.toggles').style.display='none';", 520),
 }
 SHOT_PRELUDE = """
@@ -203,6 +206,12 @@ class Handler(BaseHTTPRequestHandler):
                 msg = "Server set to " + STATE["server"]
             self._send(json.dumps({"ok": True, "message": msg + " Restarting in 2 s.", "server": STATE["server"] or DEFAULT_SERVER,
                                    "server_custom": bool(STATE["server"])}))
+        elif url.path == "/api/photo":   # one picture (?live=1: what the live view asks for); takes a moment like the real camera
+            time.sleep(0.4)
+            try:
+                self._send(open(PHOTO, "rb").read(), "image/jpeg")
+            except OSError:
+                self._send(b"no picture available in the mock", "text/plain", 503)
         elif url.path == "/api/stop":
             STATE["playing"] = False
             self._send(json.dumps({"ok": True}))
