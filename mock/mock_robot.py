@@ -93,7 +93,7 @@ def status(host=""):
         "board": "wall-e-xiao/2.5.0", "board_name": "ESP32 S3 Sense", "camera_detected": True, "camera_sensor": "OV3660",
         "ssid": "HomeWiFi", "ip": "192.168.1.50", "mac": "AA:BB:CC:DD:EE:FF", "rssi": -51,
         "uptime_s": int(time.time() - s["started"]) + 946, "state": 3, "napping": s["napping"],
-        "cpu_load": 42, "fps": 27, "heap_largest_kb": 61, "chip_temp_c": 47.5, "wifi_disconnects": 1, "wifi_last_reason": 200,
+        "muted": bool(s.get("muted")), "cpu_load": 42, "fps": 27, "heap_largest_kb": 61, "chip_temp_c": 47.5, "wifi_disconnects": 1, "wifi_last_reason": 200,
         "mic_peak_dbfs": -9.5, "mic_rms_dbfs": -38.2, "mic_clipped": 0, "mic_clipped_total": 12, "audio_in_hz": 16000, "audio_out_hz": 24000,
         "power": "battery", "cpu_mhz": 160 if s["napping"] else 240,
         "ram_free_kb": 71, "ram_total_kb": 399, "psram_free_kb": 3300, "psram_total_kb": 8192,
@@ -227,6 +227,9 @@ class Handler(BaseHTTPRequestHandler):
             elif action == "wake":
                 STATE["napping"] = False
                 self._send(json.dumps({"ok": True, "message": "Waking up."}))
+            elif action in ("mute", "unmute"):
+                STATE["muted"] = action == "mute"
+                self._send(json.dumps({"ok": True, "message": "Muted." if STATE["muted"] else "Unmuted."}))
             elif action == "deepsleep":
                 minutes = int(q.get("minutes", ["0"])[0])
                 if not 0 <= minutes <= 1440:

@@ -210,6 +210,10 @@
   #power .pstate span, #server .pstate span { color: var(--accent); font-weight: 600; }
   #power .pbtns, #server .pbtns { display: flex; gap: 10px; }
   #power .pbtns button, #server .pbtns button { margin-top: 0; }
+  #muteBtn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+  #muteBtn .micon { flex: none; }
+  #muteBtn:not(.on) #muteSlash { display: none; }   /* the slash only shows while the microphone is muted */
+  #muteBtn.on { border-color: var(--danger); color: var(--danger); background: var(--danger-wash); }
   #volume .prow { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
   #volume .prow b { font-weight: 600; }
   #volume .pstate { color: var(--muted); font-size: 13px; }
@@ -316,6 +320,7 @@
     <div class="prow"><b>Power</b><span class="pstate">Status: <span id="powerState">--</span></span></div>
     <div class="pbtns">
       <button id="napBtn" class="secondary" data-hint="Nap = light standby: the screen goes off, Wi-Fi and the wake word stay on">Nap</button>
+      <button id="muteBtn" class="secondary" data-hint="Mute turns the microphone off until you unmute (or the robot restarts): Jarvis hears nothing. The speaker stays on, so timers and music still sound"><svg class="micon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9v6h4l5 4V5L7 9z" fill="currentColor" stroke="none"/><path id="muteSlash" d="M16 9l5 6M21 9l-5 6"/></svg><span id="muteLabel">Mute</span></button>
       <button id="deepBtn" class="secondary" data-hint="Wi-Fi and the wake word go off for the time you choose, or until the BOOT button">Deep sleep&hellip;</button>
     </div>
     <div id="sleepPanel">
@@ -849,6 +854,10 @@ function loadStatus() {
     $("iStatus", stateName.charAt(0).toUpperCase() + stateName.slice(1));
     $("powerState", stateName.charAt(0).toUpperCase() + stateName.slice(1));
     document.getElementById("napBtn").textContent = s.napping ? "Wake up" : "Nap";
+    isMuted = !!s.muted;
+    document.getElementById("muteBtn").classList.toggle("on", isMuted);
+    document.getElementById("muteLabel").textContent = isMuted ? "Unmute" : "Mute";
+    document.getElementById("muteBtn").style.display = typeof s.muted === "boolean" ? "" : "none";   // firmware before build 61 has no mute
     isNapping = !!s.napping;
     $("iUptime", fmtUptime(s.uptime_s || 0));
     $("iFps", s.fps !== undefined ? String(s.fps) : "--");
@@ -883,6 +892,14 @@ function powerPost(query) {
     .then(function (r) { return r.json(); })
     .catch(function () { return { ok: false }; });
 }
+var isMuted = false;
+document.getElementById("muteBtn").addEventListener("click", function () {
+  var btn = this;
+  btn.disabled = true;
+  powerPost("action=" + (isMuted ? "unmute" : "mute")).then(function () {
+    setTimeout(function () { btn.disabled = false; loadStatus(); }, 700);
+  });
+});
 document.getElementById("napBtn").addEventListener("click", function () {
   var btn = this;
   btn.disabled = true;
