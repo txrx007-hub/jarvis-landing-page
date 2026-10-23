@@ -128,9 +128,10 @@ class Handler(BaseHTTPRequestHandler):
             self._send(html, "text/html; charset=utf-8")
         elif url.path == "/api/status":
             self._send(json.dumps(status(self.headers.get("Host", ""))))
-        elif url.path in ("/music.js", "/ha.js", "/pin.js", "/music-do.js"):   # what the backend's control panel would answer (made-up song)
+        elif url.path in ("/music.js", "/ha.js", "/pin.js", "/music-do.js", "/brain.js"):   # what the backend's control panel would answer (made-up song)
             now = {"title": "Sunrise Boulevard", "artist": "Neon Harbour"} if STATE["playing"] else None
             body = {"/music.js": "window.JARVIS_MUSIC = %s;" % json.dumps({"on": True, "now": now}),
+                    "/brain.js": 'window.JARVIS_BRAIN = {"main": "gemini-3.5-flash-lite", "last": "gemini-3.5-flash-lite", "backup": false, "failed": null};',
                     "/ha.js": 'window.JARVIS_HA = {"ok": true};',
                     "/pin.js": 'window.JARVIS_PANEL_PIN = "";',
                     "/music-do.js": 'window.JARVIS_MUSIC_DO = {"ok": true};'}[url.path]

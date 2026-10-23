@@ -316,6 +316,7 @@
       <div class="irow"><span class="k">Ping</span><span class="v" id="iPing">-- ms</span></div>
       <div class="irow"><span class="k">Mode</span><span class="v" id="iMode"></span></div>
       <div class="irow"><span class="k">Status</span><span class="v state" id="iStatus"></span></div>
+      <div class="irow" id="iBrainRow" style="display:none"><span class="k">Brain</span><span class="v" id="iBrain"></span></div>
       <div class="irow"><span class="k">Uptime</span><span class="v" id="iUptime"></span></div>
     </div>
     <div class="icol right">
@@ -557,6 +558,31 @@ function loadMusicStatus() {
     s.remove();
   };
   s.onerror = function () { musicPlaying = false; musicNext = Date.now() + 30000; if (musicOn) { musicOn = false; buildCommands(); } card.style.display = "none"; s.remove(); };
+  document.head.appendChild(s);
+}
+var brainNext = 0;
+// Which brain answered the last question? Asked of the backend (a script include, like music.js); the Brain row in the info table shows it, in the warning colour
+// while a backup brain is answering. A backend without brain.js (an older one) simply leaves the row out.
+function loadBrainStatus() {
+  var row = document.getElementById("iBrainRow");
+  if (!panelUrl) { row.style.display = "none"; return; }
+  if (Date.now() < brainNext) return;
+  brainNext = Date.now() + 5000;
+  window.JARVIS_BRAIN = null;
+  var s = document.createElement("script");
+  s.src = panelUrl + "brain.js?" + Date.now();
+  s.onload = function () {
+    var b = window.JARVIS_BRAIN || {};
+    var short = function (m) { return String(m || "").split("/").pop(); };
+    var name = short(b.last || b.main);
+    var el = document.getElementById("iBrain");
+    row.style.display = name ? "" : "none";
+    el.textContent = name + (b.backup ? " (backup)" : "");
+    el.style.color = b.backup ? "var(--instant)" : "";
+    el.title = b.backup ? "The main brain (" + short(b.main) + ") failed" + (b.failed ? " (" + b.failed + ")" : "") + ", so a backup answered the last question" : "The brain that answered the last question";
+    s.remove();
+  };
+  s.onerror = function () { brainNext = Date.now() + 30000; row.style.display = "none"; s.remove(); };
   document.head.appendChild(s);
 }
 var haOk = false, haNext = 0;
@@ -1012,6 +1038,7 @@ function renderServer(s) {
   document.getElementById("advBtn").style.display = panelUrl ? "block" : "none";
   loadHaStatus();
   loadMusicStatus();
+  loadBrainStatus();
 }
 document.getElementById("advBtn").addEventListener("click", function () {
   if (panelUrl) window.open(panelUrl + "auto", "_blank");
