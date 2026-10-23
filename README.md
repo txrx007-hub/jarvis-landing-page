@@ -23,6 +23,11 @@ Home Assistant command lists (each in its own colour):
 (Screenshots come from the fake robot in `mock/`, with made-up data. The page follows the phone's dark or
 light setting; the slider at the bottom right switches it.)
 
+At the bottom right, three small controls: **EN | NL** switches the page between English and Dutch, the **colour theme** menu picks Classic, Blueberry, Succulent
+or Peach, and the slider switches dark and light. The language is display-only: it changes the words on the page, never a setting, a value or the language
+Jarvis speaks, and it is remembered in the browser only. The Dutch texts are in the last `<script>` of `index.html` (a word list plus a few sentence patterns,
+and the voice-command reference in Dutch).
+
 ## What it does
 
 - **Device info**: board, camera (detected + sensor), MAC, live ping, mode (console / battery), status,

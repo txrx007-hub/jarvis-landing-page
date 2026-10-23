@@ -16,7 +16,7 @@
   document.documentElement.setAttribute("data-theme", theme);
   var pal = null;
   try { pal = localStorage.getItem("jarvis_palette"); } catch (e) {}
-  if (pal === "blueberry" || pal === "succulent") document.documentElement.setAttribute("data-palette", pal);
+  if (pal === "blueberry" || pal === "succulent" || pal === "peach") document.documentElement.setAttribute("data-palette", pal);
 })();
 </script>
 <style>
@@ -81,6 +81,14 @@
   :root[data-palette="succulent"][data-theme="light"] {
     --bg: #e8ede4; --card: #f6f8f3; --card-border: #bbc5b4; --accent: #1b6b55; --text: #171d24; --muted: #556a5e; --field-bg: #edf1e9;
     --accent-wash: rgba(27,107,85,.11); --accent-held: rgba(27,107,85,.22); --track: #b4c4b8;
+  }
+  :root[data-palette="peach"] {
+    --bg: #1f1815; --card: #2d221e; --card-border: #4d3a33; --accent: #f6bd60; --text: #f7ede2; --muted: #cdb5aa; --field-bg: #251b18;
+    --accent-wash: rgba(246,189,96,.13); --accent-held: rgba(246,189,96,.26); --track: #55433b;
+  }
+  :root[data-palette="peach"][data-theme="light"] {
+    --bg: #f7ede2; --card: #fff9f3; --card-border: #efc9c0; --accent: #3f7f73; --text: #3a2e2b; --muted: #7a6258; --field-bg: #fbf2e8;
+    --accent-wash: rgba(63,127,115,.11); --accent-held: rgba(63,127,115,.22); --track: #dcc6bb;
   }
   * { box-sizing: border-box; }
   body {
@@ -270,7 +278,10 @@
   button.group-toggle.open .chev { transform: rotate(90deg); }
   .group-body { display: none; }
   .group-body.open { display: block; }
-  .theme-bar { position: fixed; right: 14px; bottom: 14px; z-index: 10; display: flex; align-items: center; gap: 8px; }
+  .theme-bar { position: fixed; right: 14px; bottom: 14px; z-index: 10; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; max-width: calc(100vw - 28px); }
+  .lang-sw { display: flex; background: var(--card); border: 1px solid var(--card-border); border-radius: 999px; overflow: hidden; }
+  .lang-sw button { width: auto; margin: 0; padding: 6px 10px; border: 0; border-radius: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; }
+  .lang-sw button.on { background: var(--accent-wash); color: var(--accent); }
   select#paletteSel {
     width: auto; margin: 0; padding: 6px 12px; font-size: 12px; color: var(--muted);
     background: var(--card); border: 1px solid var(--card-border); border-radius: 999px;
@@ -391,7 +402,8 @@
   <button id="reset" data-hint="Sets every robot setting back to its default">Reset all to defaults</button>
   <footer>Changes apply and save right away. On your home network only.</footer>
   <div class="theme-bar">
-    <select id="paletteSel" title="Colour theme" aria-label="Colour theme"><option value="classic">Classic</option><option value="blueberry">Blueberry</option><option value="succulent">Succulent</option></select>
+    <div class="lang-sw" role="group" aria-label="Language"><button type="button" data-lang="en" aria-pressed="true">EN</button><button type="button" data-lang="nl" aria-pressed="false">NL</button></div>
+    <select id="paletteSel" title="Colour theme" aria-label="Colour theme"><option value="classic">Classic</option><option value="blueberry">Blueberry</option><option value="succulent">Succulent</option><option value="peach">Peach</option></select>
     <label class="theme-switch" title="Dark / light theme">
       <span>Dark</span>
       <input type="checkbox" id="themeSwitch" aria-label="Light theme">
@@ -603,7 +615,7 @@ var cmdSel = "";   // the group that is open ("" = none): the page starts as a r
 function buildCommands() {
   var container = document.getElementById("commands");
   container.innerHTML = "";
-  var groups = VOICE_COMMANDS.filter(function (g) {
+  var groups = (window.jarvisLang && window.jarvisLang() === "nl" ? VOICE_COMMANDS_NL : VOICE_COMMANDS).filter(function (g) {
     return !(g[2] === "ha" && !haOk) && !(g[2] === "music" && !musicOn);
   });
   if (cmdSel && !groups.some(function (g) { return g[0] === cmdSel; })) cmdSel = "";
@@ -623,7 +635,7 @@ function buildCommands() {
     b.type = "button";
     b.className = "ctile k-" + kindOf(group) + (group[0] === cmdSel ? " on" : "");
     b.setAttribute("aria-pressed", group[0] === cmdSel ? "true" : "false");
-    b.textContent = group[0].replace(/^Instant: /, "");   // the orange colour already says "instant"
+    b.textContent = group[0].replace(/^(Instant|Direct): /, "");   // the orange colour already says "instant"
     var n = document.createElement("small");
     n.textContent = group[1].length;
     b.appendChild(n);
@@ -1308,5 +1320,307 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
   <div class="crow"><button type="button" id="confirmNo" class="secondary">Cancel</button><button type="button" id="confirmYes">OK</button></div>
 </dialog>
 <div id="hint" role="tooltip"></div>
+<script>
+// English / Dutch. The page's own texts are English; Dutch is a DISPLAY-ONLY layer on top: it changes what is shown, never a value. Setting keys and values, option values,
+// everything sent to the robot or the backend and the language Jarvis speaks stay exactly as they are. The chosen language is kept in this browser only (jarvis_lang).
+(function () {
+  var NL = {
+    // header and info table
+    "Jarvis settings": "Jarvis-instellingen", "Advanced ↗": "Geavanceerd ↗",
+    "The backend control panel on your PC: servers, brains, voices, keys": "Het bedieningspaneel van de backend op je pc: servers, breinen, stemmen, sleutels",
+    "Loading...": "Laden...", "Board": "Bord", "Chip temperature": "Chiptemperatuur", "Camera detected": "Camera gevonden", "MAC address": "MAC-adres",
+    "Mode": "Modus", "Brain": "Brein", "Uptime": "Looptijd", "YES": "JA", "NO": "NEE", "Console": "Console", "Battery": "Batterij", "timeout": "time-out",
+    "no ip": "geen ip", "Could not reach Jarvis": "Kan Jarvis niet bereiken",
+    // states
+    "Unknown": "Onbekend", "Starting": "Opstarten", "Wifi setup": "Wifi-installatie", "Idle": "Inactief", "Connecting": "Verbinden", "Listening": "Luisteren",
+    "Speaking": "Praten", "Notifying": "Melden", "Upgrading": "Updaten", "Activating": "Activeren", "Testing audio": "Audio testen", "Fatal error": "Fatale fout",
+    "Napping": "Dutje", "Music mode": "Muziekmodus", "Going to sleep...": "Gaat slapen...",
+    // buttons and cards
+    "Voice commands": "Spraakopdrachten", "Hide voice commands": "Verberg spraakopdrachten", "Remote control": "Afstandsbediening", "Hide remote": "Verberg afstandsbediening",
+    "Everything you can say to Jarvis": "Alles wat je tegen Jarvis kunt zeggen",
+    "Drive the robot: hold an arrow, let go to stop": "Bestuur de robot: houd een pijl ingedrukt, laat los om te stoppen",
+    "Takes one photo with the robot’s camera; with your own backend it is also saved in the dcim folder on the PC": "Maakt één foto met de camera van de robot; met je eigen backend wordt die ook opgeslagen in de dcim-map op de pc",
+    "Music": "Muziek", "Nothing playing": "Er speelt niets", "Next": "Volgende",
+    "Stops the song, radio station or podcast now": "Stopt het nummer, het radiostation of de podcast direct",
+    "Plays another song from the music folder": "Speelt een ander nummer uit de muziekmap",
+    "Photo from the robot's camera": "Foto van de camera van de robot", "Live view from the robot's camera": "Live beeld van de camera van de robot",
+    "Taking photo...": "Foto maken...", "Taking a picture...": "Foto wordt genomen...", "no answer from Jarvis": "geen antwoord van Jarvis",
+    "Power": "Energie", "Nap": "Dutje", "Wake up": "Wakker worden", "Mute": "Dempen", "Unmute": "Dempen opheffen", "Deep sleep…": "Diepe slaap…",
+    "Nap = light standby: the screen goes off, Wi-Fi and the wake word stay on": "Dutje = lichte stand-by: het scherm gaat uit, wifi en het wekwoord blijven aan",
+    "Mute turns the microphone off until you unmute (or the robot restarts): Jarvis hears nothing. The speaker stays on, so timers and music still sound": "Dempen zet de microfoon uit tot je het opheft (of de robot herstart): Jarvis hoort niets. De speaker blijft aan, dus timers en muziek klinken nog steeds",
+    "Wi-Fi and the wake word go off for the time you choose, or until the BOOT button": "Wifi en het wekwoord gaan uit voor de gekozen tijd, of tot de BOOT-knop",
+    "Sleep for": "Slaap gedurende", "Hours": "Uren", "Minutes": "Minuten", "hrs": "uur", "1 hr": "1 uur", "2 hrs": "2 uur", "8 hrs": "8 uur",
+    "Until BOOT button": "Tot BOOT-knop", "Go to deep sleep": "Ga in diepe slaap",
+    "Volume": "Volume", "Speaker volume": "Speakervolume", "100% is full volume.": "100% is volledig volume.",
+    "Forward": "Vooruit", "Spin left": "Links draaien", "Spin right": "Rechts draaien", "Backward": "Achteruit",
+    "Hold an arrow to drive (full speed), let go to stop. Keyboard arrows work too.": "Houd een pijl ingedrukt om te rijden (volle snelheid), laat los om te stoppen. De pijltjestoetsen op het toetsenbord werken ook.",
+    "Live view": "Live beeld", "Stop live view": "Stop live beeld", "Starting...": "Starten...",
+    "Shows what the robot sees while you drive: a new picture about once a second, only while this page is open (stops after 3 minutes)": "Toont wat de robot ziet terwijl je rijdt: ongeveer elke seconde een nieuw beeld, alleen zolang deze pagina open is (stopt na 3 minuten)",
+    "Live view stopped after 3 minutes. Tap Live view to continue.": "Live beeld gestopt na 3 minuten. Tik op Live beeld om door te gaan.",
+    "Loading settings...": "Instellingen laden...", "Could not load settings.": "Kon de instellingen niet laden.",
+    "Motors": "Motoren", "Audio and wake word": "Audio en wekwoord", "Screen and quiet hours": "Scherm en stille uren", "Weather": "Weer", "Visualizer": "Visualizer",
+    "System": "Systeem", "Other": "Overig",
+    "Reset all to defaults": "Alles terugzetten naar standaard", "Sets every robot setting back to its default": "Zet elke robotinstelling terug naar de standaardwaarde",
+    "Reset every setting to its default? This cannot be undone.": "Elke instelling terugzetten naar de standaardwaarde? Dit kan niet ongedaan worden gemaakt.",
+    "Reset": "Terugzetten", "Cancel": "Annuleren", "Sleep": "Slapen",
+    "Changes apply and save right away. On your home network only.": "Wijzigingen worden direct toegepast en opgeslagen. Alleen op je thuisnetwerk.",
+    "Colour theme": "Kleurthema", "Classic": "Klassiek", "Blueberry": "Blauwe bes", "Succulent": "Vetplant", "Peach": "Perzik",
+    "Dark / light theme": "Donker / licht thema", "Dark": "Donker", "Light": "Licht", "Light theme": "Licht thema", "Language": "Taal", "Pages": "Pagina2019s",
+    "The brain that answered the last question": "Het brein dat de laatste vraag beantwoordde",
+    // settings: labels, values, placeholders
+    "Top speed": "Topsnelheid", "Steering trim": "Stuurcorrectie", "Turn duration (90°)": "Draaitijd (90°)", "Right motor direction": "Richting rechtermotor",
+    "Left motor direction": "Richting linkermotor", "Swap left/right": "Links/rechts omwisselen", "Soft start ramp": "Zachte start", "Microphone gain": "Microfoonversterking",
+    "Wake sensitivity": "Wekgevoeligheid", "Camera shutter sound": "Sluitergeluid camera", "Camera brightness": "Camerahelderheid", "Wake chirp": "Wektjilp",
+    "Idle clock after": "Klok bij inactiviteit na", "Quiet hours start": "Stille uren begin", "Quiet hours end": "Stille uren einde", "Weather city": "Plaats voor het weer",
+    "Speaking screen effect": "Schermeffect tijdens praten", "Music screen picture": "Afbeelding muziekscherm", "Log detail": "Logdetail",
+    "On": "Aan", "Off": "Uit", "off": "uit", "(not set)": "(niet ingesteld)",
+    "music icon 1": "muziekicoon 1", "music icon 2": "muziekicoon 2", "music icon 3": "muziekicoon 3", "music icon 4": "muziekicoon 4",
+    "e.g. Amsterdam (leave empty for off)": "bijv. Amsterdam (leeg laten = uit)", "(leave empty for off)": "(leeg laten = uit)",
+    "caps all movement, in percent": "begrenst alle beweging, in procenten",
+    "wheel balance: raise it if Jarvis drifts left, lower it if it drifts right": "wielbalans: verhoog de waarde als Jarvis naar links afdrijft, verlaag hem als hij naar rechts afdrijft",
+    "milliseconds for a 90 degree turn at speed 60": "milliseconden voor een draai van 90 graden bij snelheid 60",
+    "reverses motor A (right wheel)": "keert motor A om (rechterwiel)", "reverses motor B (left wheel)": "keert motor B om (linkerwiel)",
+    "swaps the left and right motors": "wisselt de linker- en rechtermotor om", "ramp-up time that limits current spikes": "oploptijd die stroompieken beperkt",
+    "software microphone gain in dB": "softwarematige microfoonversterking in dB", "wake word threshold, lower wakes more easily": "drempel voor het wekwoord, lager wekt sneller",
+    "click sound when taking a photo": "klikgeluid bij het maken van een foto",
+    "camera exposure target: raise it if photos come out dark, lower it if bright spots wash out (0 = sensor default)": "belichtingsdoel van de camera: verhoog het als foto’s te donker zijn, verlaag het als heldere plekken uitvloeien (0 = standaard van de sensor)",
+    "short chirp right after the wake word": "kort tjilpgeluid direct na het wekwoord", "night mode start, HH:MM or off": "begin van de nachtmodus, UU:MM of uit",
+    "night mode end, HH:MM or off": "einde van de nachtmodus, UU:MM of uit",
+    "show the big clock after this many idle minutes (0 = off)": "toon de grote klok na zoveel minuten inactiviteit (0 = uit)",
+    "city for the weather, for example Amsterdam, or off": "plaats voor het weer, bijvoorbeeld Amsterdam, of uit",
+    "what the screen shows while Jarvis speaks: off, winamp, rainbow, scope, radial, vu, mouth or orb": "wat het scherm toont terwijl Jarvis praat: off, winamp, rainbow, scope, radial, vu, mouth of orb",
+    "the picture that replaces the eyes while music plays: music icon 1, 2, 3 or 4": "de afbeelding die de ogen vervangt terwijl er muziek speelt: muziekicoon 1, 2, 3 of 4",
+    "serial log detail: error, warn, info or debug": "detail van het seriële log: error, warn, info of debug",
+    // messages the robot sends back
+    "Saved": "Opgeslagen", "Could not change it": "Kon het niet wijzigen", "timed out applying the setting": "de instelling toepassen duurde te lang",
+    "Napping.": "Dutje.", "Waking up.": "Wakker worden.", "Muted: the microphone is off until you unmute.": "Gedempt: de microfoon staat uit tot je het opheft.",
+    "Unmuted: listening again.": "Dempen opgeheven: luistert weer.", "Deep sleep in 2 s.": "Diepe slaap over 2 s.", "Deep sleep in 2 s, until the BOOT button.": "Diepe slaap over 2 s, tot de BOOT-knop.",
+    "no camera found": "geen camera gevonden", "Jarvis is napping: wake it first": "Jarvis doet een dutje: maak hem eerst wakker",
+    "the camera is busy with another picture": "de camera is bezig met een andere foto", "cannot take the picture now": "kan de foto nu niet maken",
+    "not enough memory for a picture": "niet genoeg geheugen voor een foto", "All settings reset to defaults.": "Alle instellingen zijn teruggezet naar de standaardwaarden.",
+    // voice commands page
+    "Original: any server": "Origineel: elke server", "Instant: own server, done at once": "Direct: eigen server, meteen uitgevoerd",
+    "Music: while the music player is on": "Muziek: zolang de muziekspeler aan staat", "Home: while Home Assistant answers": "Thuis: zolang Home Assistant antwoordt",
+    "Tap a group to see what you can say.": "Tik op een groep om te zien wat je kunt zeggen."
+  };
+  var KEYS = { motor_max_speed: "Topsnelheid", motor_trim: "Stuurcorrectie", turn_ms_per_90: "Draaitijd (90°)", motor_a_invert: "Richting rechtermotor", motor_b_invert: "Richting linkermotor",
+    motor_swap: "Links/rechts omwisselen", soft_start_ms: "Zachte start", mic_gain_db: "Microfoonversterking", wake_threshold: "Wekgevoeligheid", shutter_sound: "Sluitergeluid camera",
+    camera_brightness: "Camerahelderheid", wake_chirp: "Wektjilp", idle_clock_min: "Klok bij inactiviteit na", quiet_start: "Stille uren begin", quiet_end: "Stille uren einde",
+    weather_city: "Plaats voor het weer", visualizer_mode: "Schermeffect tijdens praten", music_icon: "Afbeelding muziekscherm", log_level: "Logdetail" };
+  function dur(s, wake) {   // "for 1 hr 30 min" / "until you press the BOOT button"
+    if (s === "until you press the BOOT button") return "tot je op de BOOT-knop drukt";
+    var m = /^for (?:(\d+) hrs?)?(?: )?(?:(\d+) min)?$/.exec(s);
+    if (!m) return s;
+    return (wake ? "na " : "gedurende ") + (m[1] ? m[1] + " uur" : "") + (m[1] && m[2] ? " " : "") + (m[2] ? m[2] + " min" : "");
+  }
+  var RULES = [
+    [/^Playing: ([\s\S]+)$/, function (r) { return "Speelt: " + r[1]; }],
+    [/^([\s\S]+) \(backup\)$/, function (r) { return r[1] + " (reserve)"; }],
+    [/^The main brain \((.*)\) failed(?: \((.*)\))?, so a backup answered the last question$/, function (r) { return "Het hoofdbrein (" + r[1] + ") faalde" + (r[2] ? " (" + r[2] + ")" : "") + ", dus een reserve beantwoordde de laatste vraag"; }],
+    [/^YES \((.*)\)$/, function (r) { return "JA (" + r[1] + ")"; }],
+    [/^([\d.]+) MB free$/, function (r) { return r[1] + " MB vrij"; }],
+    [/^(\d+)h (\d+)m$/, function (r) { return r[1] + "u " + r[2] + "m"; }],
+    [/^State (\d+)$/, function (r) { return "Status " + r[1]; }],
+    [/^Asked for (\d+)%, but night mode \(quiet hours\) limits it to (\d+)%\.$/, function (r) { return r[1] + "% gevraagd, maar de nachtmodus (stille uren) beperkt het tot " + r[2] + "%."; }],
+    [/^Taken at (.+)\. Tap Camera again for a new picture\.$/, function (r) { return "Genomen om " + r[1] + ". Tik nogmaals op Camera voor een nieuwe foto."; }],
+    [/^No picture: ([\s\S]+)$/, function (r) { return "Geen foto: " + tr(r[1]); }],
+    [/^Live view stopped: ([\s\S]+)$/, function (r) { return "Live beeld gestopt: " + tr(r[1]); }],
+    [/^Deep sleep (until you press the BOOT button|for [^?]*)\? Wi-Fi turns off and this page will stop responding\.$/, function (r) { return "Diepe slaap " + dur(r[1], false) + "? Wifi gaat uit en deze pagina reageert niet meer."; }],
+    [/^Wi-Fi and the wake word switch off, so this page stops responding\. Jarvis wakes (until you press the BOOT button|for [^.]*?)( or when you press the BOOT button)?\. 0 hrs 0 min = until the BOOT button\.$/,
+      function (r) { return "Wifi en het wekwoord gaan uit, dus deze pagina reageert niet meer. Jarvis wordt wakker " + dur(r[1], true) + (r[2] ? " of als je op de BOOT-knop drukt" : "") + ". 0 uur 0 min = tot de BOOT-knop."; }],
+    [/^(\w+) changed from (.+) to (.+?)\.?( Restarting in 2 s\.)?$/, function (r) { return (KEYS[r[1]] || r[1]) + " veranderd van " + tr(r[2]) + " naar " + tr(r[3]) + "." + (r[4] ? " Herstart over 2 s." : ""); }],
+    [/^(\w+) is already (.+)\.$/, function (r) { return (KEYS[r[1]] || r[1]) + " staat al op " + tr(r[2]) + "."; }],
+    [/^(\w+) must be (.+)\.$/, function (r) { return (KEYS[r[1]] || r[1]) + " moet zijn: " + r[2] + "."; }]
+  ];
+
+  // The voice-command reference in Dutch: labels and explanations are translated, the quoted example phrases stay as they are (they are what the robot matches).
+  window.VOICE_COMMANDS_NL = [
+    ["Beweging", [
+      ["Rijden, draaien, stoppen", "“drive forward for two seconds”, “turn around”, “stop”"],
+      ["Dansen", "“do a little dance” (willekeurig, wiebelen, draaien of vrolijk)"],
+      ["Rondkijken", "“look around the room” (4 foto’s, één gecombineerd antwoord)"]
+    ]],
+    ["Scherm", [
+      ["Spreekeffect", "“switch the screen effect to radial” (off, winamp, rainbow, scope, radial, vu, mouth, orb)"],
+      ["Klok / schermbeveiliging", "“show the clock”"],
+      ["QR: instellingenpagina", "“show me a QR code for your settings page” (Jarvis toont een code die deze pagina opent)"],
+      ["QR: backend", "“show me a QR code for your backend” / “…for your server” (heeft je eigen server nodig)"],
+      ["Beide QR-codes", "“show me your QR codes” / “how do I open your pages?” (na elkaar, ongeveer een minuut)"]
+    ]],
+    ["Volume", [
+      ["Uitlezen", "“what is your volume?”, “what is your max volume?”"],
+      ["Wijzigen", "“set the volume to 80”, “turn the volume up” (100 is vol volume)"]
+    ]],
+    ["Gezichten", [
+      ["Een uitdrukking tonen", "“look sad”, “show a happy face”"],
+      ["Uitdrukkingen opsommen", "“what faces can you make?”"]
+    ]],
+    ["Audio-afstelling", [
+      ["Microfoonversterking", "“make the microphone more sensitive”"],
+      ["Wekgevoeligheid", "“wake up more easily”"],
+      ["Huidige afstelling uitlezen", "“what are your audio settings?”"]
+    ]],
+    ["Instellingen", [
+      ["Opsommen / uitlezen / wijzigen / terugzetten", "“you drift to the left”, “what are your current settings?”"]
+    ]],
+    ["Energie", [
+      ["Dutje", "“take a nap” / “are you napping?”"],
+      ["Diepe slaap", "“sleep for two hours”, “sleep until 7 o’clock”"]
+    ]],
+    ["Wifi", [
+      ["Netwerk wijzigen", "“reconfigure your WiFi” (bevestig als erom gevraagd wordt; Jarvis opent zijn installatie-hotspot)"]
+    ]],
+    ["Timers", [
+      ["Instellen / opsommen / annuleren", "“set a timer for 5 minutes”, “alarm at 7:30”, “what timers are running?”"]
+    ]],
+    ["Weer", [
+      ["Opvragen", "“what’s the weather?” (stel eerst de plaats in bij Instellingen)"]
+    ]],
+    ["Diagnostiek", [
+      ["Opsommen / een controle uitvoeren", "“what can you check?”, “run a diagnostic on the camera”, “check everything”"]
+    ]],
+    ["Ingebouwd (upstream)", [
+      ["Volume, foto, status, thema", "“turn the volume up”, “take a photo”, “switch to dark theme”"]
+    ]],
+    ["Direct: stoppen en rijden", [
+      ["Stop", "“stop”, “halt”, “freeze”"],
+      ["Rijden", "“go forward”, “go back”, “go forward for 3 seconds”"],
+      ["Kom hier", "“come here” / “kom hier”: één seconde rechtdoor op volle kracht"],
+      ["Draaien", "“turn left”, “turn right”, “turn around”"],
+      ["Dansen", "“dance”"]
+    ], true],
+    ["Direct: geluid en scherm", [
+      ["Volume", "“volume 50”, “volume up”, “volume down”, “louder”, “full volume”"],
+      ["Thema", "“dark mode”, “light mode”"],
+      ["Helderheid", "“brightness 30”"]
+    ], true],
+    ["Direct: tijd en timers", [
+      ["Tijd en datum", "“what time is it?”, “what day is it?”"],
+      ["Timer", "“set a timer for 5 minutes”, “cancel all timers”"]
+    ], true],
+    ["Direct: notities en macro’s", [
+      ["Notities", "“make a note: buy filament”, “read my notes”, “what do my notes say about the dishwasher?” (de map notes/ op de backend)"],
+      ["Macro’s", "“party time”, “greet the room”, “good night mode”: één zin voert een lijst stappen uit die je schrijft in profiles/macros.yaml (zeg stop om te beëindigen)"]
+    ], true],
+    ["Direct: stemmingen", [
+      ["Stemming", "“be cheerful”, “be calm”, “be serious”, “be dry”, “back to normal”"]
+    ], true],
+    ["Direct: verkennen en briefing", [
+      ["Verkennen", "“explore the room” (kijkt rond, stapt vooruit, kijkt opnieuw en vertelt dan wat het vond)"],
+      ["Briefing", "“good morning” (weer, timers, notities en nieuws over de onderwerpen die in de backend zijn ingesteld)"],
+      ["Ook in het Nederlands", "“vooruit”, “hoe laat is het?”, “zet een timer op 10 minuten”, “wees kalm”, “goedemorgen”"]
+    ], true],
+    ["Muziek: nummers uit je muziekmap", [
+      ["Afspelen", "“play something random”, “play a song by Queen”, “play Bohemian Rhapsody”, “speel een nummer van Abba” (30 seconden van het nummer)"],
+      ["Bediening", "“next song”, “stop the music”, “what is this song?”, of de knoppen Stop en Volgende op deze pagina"]
+    ], "music"],
+    ["Muziek: radio en podcasts", [
+      ["Radio", "“play Radio 538”, “play jazz radio”, “put on NPO Radio 2”, “speel Q-music” (speelt tot je stopt)"],
+      ["Podcasts", "“play the latest episode of <a podcast from your list>”, “play podcast <name>” (de programma’s die je opsomt in music/radio.yaml op de backend)"],
+      ["Stop", "“stop the radio”, “stop”, of de knop Stop op deze pagina"]
+    ], "music"],
+    ["Thuis: lampen en schakelaars", [
+      ["Aan en uit", "“turn off the living room light”, “turn on the tv”, “switch off the fan”, “woonkamer lamp aan”, “doe de schuur uit”"],
+      ["Helderheid", "“dim the game room to 40”, “zet de lamp op 30 procent”"],
+      ["Hele kamers", "“turn off all lights in the living room”, “lights off” (vraagt eerst als het er meer dan vijf zijn)"]
+    ], "ha"],
+    ["Thuis: scènes, scripts en verwarming", [
+      ["Scènes en scripts", "“start the netflix scene”, “run the goodnight script”, “zet de disco scene aan”"],
+      ["Verwarming", "“set the AC livingroom to 21”, “zet de airco kantoor op 20”, “make it warmer” (bij twee thermostaten vraagt het welke)"],
+      ["Jaloezieën", "“close the blinds” (vraagt eerst om een ja)"]
+    ], "ha"],
+    ["Thuis: boodschappenlijst", [
+      ["Toevoegen", "“add milk and eggs to the shopping list”, “zet melk op de boodschappenlijst”"],
+      ["Voorlezen", "“what is on the shopping list?”, “wat staat er op de boodschappenlijst?”"],
+      ["Verwijderen", "“remove milk from the shopping list”, “haal melk van de boodschappenlijst”"]
+    ], "ha"],
+    ["Thuis: vragen", [
+      ["Toestand", "“is the living room light on?”, “which lights are on?”, “what is the temperature in the living room?”"],
+      ["Al het andere", "“make the lights cosy”: het brein kiest zelf de Home Assistant-actie"],
+      ["Nooit", "sloten, alarmen en garagedeuren: Jarvis weigert"]
+    ], "ha"]
+  ];
+
+  var lang = "en";
+  try { lang = localStorage.getItem("jarvis_lang") === "nl" ? "nl" : "en"; } catch (e) {}
+  var ATTRS = ["title", "placeholder", "aria-label", "alt", "data-hint"];
+  var texts = new WeakMap(), attrs = new WeakMap();
+  function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  function tr(s) {
+    var m = /^(\s*)([\s\S]*?)(\s*)$/.exec(s), core = m[2];
+    if (!core) return s;
+    var d;
+    if (has(NL, core)) d = NL[core];
+    else for (var i = 0; i < RULES.length; i++) { var r = RULES[i][0].exec(core); if (r) { d = RULES[i][1](r); break; } }
+    return d === undefined ? s : m[1] + d + m[3];
+  }
+  function doText(node) {
+    var p = node.parentNode;
+    if (!p || /^(SCRIPT|STYLE|TEXTAREA)$/.test(p.nodeName)) return;
+    var cur = node.nodeValue, st = texts.get(node), orig = st && cur === st.shown ? st.orig : cur;
+    var shown = lang === "nl" ? tr(orig) : orig;
+    if (st && st.orig === orig && st.shown === shown && cur === shown) return;
+    if (shown !== cur) {
+      // an <option> without a value attribute takes its value from its text: pin the value first, so translating the label can never change what is sent
+      if (p.nodeName === "OPTION" && !p.hasAttribute("value")) p.setAttribute("value", orig.replace(/\s+/g, " ").trim());
+      node.nodeValue = shown;
+    }
+    texts.set(node, { orig: orig, shown: shown });
+  }
+  function doAttr(el, name) {
+    if (!el.getAttribute) return;
+    var cur = el.getAttribute(name);
+    if (cur === null) return;
+    var map = attrs.get(el) || {}, st = map[name], orig = st && cur === st.shown ? st.orig : cur;
+    var shown = lang === "nl" ? tr(orig) : orig;
+    if (st && st.orig === orig && st.shown === shown && cur === shown) return;
+    if (shown !== cur) el.setAttribute(name, shown);
+    map[name] = { orig: orig, shown: shown };
+    attrs.set(el, map);
+  }
+  function walk(node) {
+    if (node.nodeType === 3) { doText(node); return; }
+    if (node.nodeType !== 1 || /^(SCRIPT|STYLE)$/.test(node.nodeName)) return;
+    for (var i = 0; i < ATTRS.length; i++) if (node.hasAttribute(ATTRS[i])) doAttr(node, ATTRS[i]);
+    for (var c = node.firstChild; c; c = c.nextSibling) walk(c);
+  }
+  var titleOrig = document.title;
+  function paintLang() {
+    var btns = document.querySelectorAll(".lang-sw button");
+    for (var i = 0; i < btns.length; i++) {
+      var on = btns[i].getAttribute("data-lang") === lang;
+      btns[i].classList.toggle("on", on);
+      btns[i].setAttribute("aria-pressed", on ? "true" : "false");
+    }
+  }
+  function apply() {
+    document.documentElement.setAttribute("lang", lang);
+    document.title = lang === "nl" ? tr(titleOrig) : titleOrig;
+    walk(document.body);
+    paintLang();
+  }
+  window.jarvisLang = function () { return lang; };
+  function setLang(l) {
+    if (l === lang) return;
+    lang = l;
+    try { localStorage.setItem("jarvis_lang", l); } catch (e) {}
+    cmdSel = "";
+    buildCommands();   // the voice-command reference has its own Dutch list
+    apply();
+  }
+  var sw = document.querySelector(".lang-sw");
+  if (sw) sw.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) setLang(b.getAttribute("data-lang")); });
+  if (lang === "nl") buildCommands();
+  apply();
+  new MutationObserver(function (list) {
+    for (var i = 0; i < list.length; i++) {
+      var m = list[i];
+      if (m.type === "characterData") doText(m.target);
+      else if (m.type === "attributes") doAttr(m.target, m.attributeName);
+      else for (var j = 0; j < m.addedNodes.length; j++) walk(m.addedNodes[j]);
+    }
+  }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });
+})();
+</script>
 </body>
 </html>
