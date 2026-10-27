@@ -97,6 +97,8 @@ itself. `l=0&r=0` stops immediately and cancels any queued movement.
 |---|---|---|
 | `nap` | | Light standby, starts about 2 s later |
 | `mute` / `unmute` | | The microphone reads silence until unmuted or until the robot restarts (nothing is saved; `muted` in `/api/status`). The speaker stays on |
+| `follow_on` / `follow_off` | | Follow mode (the `follow_mode` setting, always off after a restart): while Jarvis is idle it keeps turning on the spot towards your face. Needs the own voice server; reported as `follow` in `/api/status` (firmware build 81 and newer) |
+| `face` | | Looks at you once: one picture, the own server finds the face, up to three short full-power turns until Jarvis faces it (about 3 to 8 s, the answer comes at once). Needs the own voice server |
 | `wake` | | Leaves the nap |
 | `deepsleep` | `minutes=0..1440` | Everything off including WiFi, starts about 2 s later; `0` = until the BOOT button is pressed. Only the timer or the BOOT button wakes the robot; this API cannot. |
 
