@@ -235,6 +235,12 @@
   #camera { display: none; margin-top: 10px; text-align: center; }
   #camera img { display: none; width: 100%; max-width: 320px; border-radius: 10px; border: 1px solid var(--card-border); margin: 0 auto; }
   #power { margin-top: 10px; }
+  #follow { margin-top: 10px; }
+  #follow .prow { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 4px; }
+  #follow .prow b { font-weight: 600; }
+  #follow .fhint { color: var(--muted); font-size: 13px; margin: 4px 0 10px; }
+  #follow .fbtns { display: flex; gap: 10px; }
+  #follow .fbtns button { margin-top: 0; }
   #power .prow, #server .prow, #music .prow { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
   #power .prow b, #server .prow b, #music .prow b { font-weight: 600; }
   #power .pstate, #server .pstate, #music .pstate { color: var(--muted); font-size: 13px; }
@@ -355,6 +361,13 @@
     <p class="status" id="camMsg"></p>
   </div>
   <div id="commands"></div>
+  <div id="follow" class="card" style="display:none">
+    <div class="prow"><b>Follow me</b>
+      <label class="theme-switch" data-hint="Follow mode: while Jarvis is idle it keeps turning towards your face. It needs your own voice server and your face in front of the camera, and it is always off again after a restart"><span id="followWord">Off</span><input type="checkbox" id="followSwitch" aria-label="Follow mode"><span class="track"></span></label>
+    </div>
+    <p class="fhint">Jarvis turns on the spot towards your face. Keep it on a flat table with room to turn.</p>
+    <div class="fbtns"><button id="faceBtn" class="secondary" data-hint="Look at you once: takes a picture, finds your face and turns in up to three short steps">Face me</button></div>
+  </div>
   <div id="power" class="card">
     <div class="prow"><b>Power</b><span class="pstate">Status: <span id="powerState">--</span></span></div>
     <div class="pbtns">
@@ -414,17 +427,18 @@
 </div>
 <script>
 // Settings that exist on the device but are not offered on the page (fixed at their defaults).
-var HIDDEN = { motor_max_speed: true, shutter_sound: true };
+var HIDDEN = { motor_max_speed: true, shutter_sound: true, follow_mode: true };   // follow_mode has its own card
 // Groups control section order and titles; any key not listed lands in "Other".
 // Groups shown as a toggle button that expands to their settings (remembered while the page is open).
-var COLLAPSIBLE = { "Motors": true, "Audio and wake word": true, "Screen and quiet hours": true };
+var COLLAPSIBLE = { "Motors": true, "Face and movement": true, "Audio and wake word": true, "Screen and quiet hours": true };
 var openGroups = {};
 var GROUPS = [
   ["Motors", ["motor_trim", "turn_ms_per_90", "motor_a_invert", "motor_b_invert", "motor_swap", "soft_start_ms"]],
+  ["Face and movement", ["talk_motion", "talk_power", "follow_ms", "face_short_ms", "face_mid_ms", "face_long_ms", "face_invert"]],
   ["Audio and wake word", ["mic_gain_db", "wake_threshold", "wake_chirp"]],
   ["Screen and quiet hours", ["idle_clock_min", "quiet_start", "quiet_end"]],
   ["Weather", ["weather_city"]],
-  ["Camera", ["camera_brightness"]],
+  ["Camera", ["camera_brightness", "camera_saturation"]],
   ["Visualizer", ["visualizer_mode", "music_icon"]],
   ["System", ["log_level"]]
 ];
@@ -432,8 +446,10 @@ var LABELS = {
   motor_max_speed: "Top speed", motor_trim: "Steering trim", turn_ms_per_90: "Turn duration (90°)",
   motor_a_invert: "Right motor direction", motor_b_invert: "Left motor direction", motor_swap: "Swap left/right",
   soft_start_ms: "Soft start ramp", mic_gain_db: "Microphone gain", wake_threshold: "Wake sensitivity",
-  shutter_sound: "Camera shutter sound", camera_brightness: "Camera brightness", wake_chirp: "Wake chirp",
+  shutter_sound: "Camera shutter sound", camera_brightness: "Camera brightness", camera_saturation: "Camera colour", wake_chirp: "Wake chirp",
   idle_clock_min: "Idle clock after", quiet_start: "Quiet hours start", quiet_end: "Quiet hours end",
+  talk_motion: "Move while talking", talk_power: "Talking movement power", follow_mode: "Follow me", follow_ms: "Follow: time between looks",
+  face_short_ms: "Face turn: small step", face_mid_ms: "Face turn: medium step", face_long_ms: "Face turn: big step", face_invert: "Face turn: swap left/right",
   weather_city: "Weather city", visualizer_mode: "Speaking screen effect", music_icon: "Music screen picture", log_level: "Log detail"
 };
 var PLACEHOLDERS = {
@@ -445,7 +461,8 @@ var VOICE_COMMANDS = [
   ["Movement", [
     ["Drive, turn, stop", "“drive forward for two seconds”, “turn around”, “stop”"],
     ["Dance", "“do a little dance” (random, wiggle, spin, or happy)"],
-    ["Look around", "“look around the room” (4 photos, one combined answer)"]
+    ["Look around", "“look around the room” (4 photos, one combined answer)"],
+    ["Face me, follow me", "“look at me” (turns towards your face), “follow me” / “stop following me” (keeps turning towards it)"]
   ]],
   ["Screen", [
     ["Speaking effect", "“switch the screen effect to radial” (off, winamp, rainbow, scope, radial, vu, mouth, orb)"],
@@ -495,6 +512,9 @@ var VOICE_COMMANDS = [
     ["Drive", "“go forward”, “go back”, “go forward for 3 seconds”"],
     ["Come here", "“come here” / “kom hier”: one second straight ahead at full power"],
     ["Turn", "“turn left”, “turn right”, “turn around”"],
+    ["Look at me", "“look at me”, “face me”, “turn to me”: a picture, then a few short turns until Jarvis faces your face"],
+    ["Follow me", "“follow me” / “stop following me”: keeps turning towards your face while idle (off again after a restart)"],
+    ["Talking movements", "“don't move while you talk” / “move when you talk”: the small shakes while Jarvis speaks"],
     ["Dance", "“dance”"]
   ], true],
   ["Instant: sound and screen", [
@@ -685,7 +705,7 @@ function fmtValue(def) {
   if (def.kind === "enum") return def.value;
   var unit = def.key.indexOf("_ms") >= 0 || def.key === "turn_ms_per_90" ? " ms"
     : def.key === "mic_gain_db" ? " dB"
-    : def.key.indexOf("speed") >= 0 ? "%"
+    : def.key.indexOf("speed") >= 0 || def.key === "talk_power" ? "%"
     : def.key === "idle_clock_min" ? " min"
     : "";
   return def.value + unit;
@@ -927,6 +947,12 @@ function loadStatus() {
     document.getElementById("muteLabel").textContent = isMuted ? "Unmute" : "Mute";
     document.getElementById("muteBtn").style.display = typeof s.muted === "boolean" ? "" : "none";   // firmware before build 61 has no mute
     isNapping = !!s.napping;
+    var followCard = document.getElementById("follow");   // firmware before build 81 reports nothing: no card
+    followCard.style.display = typeof s.follow === "boolean" ? "" : "none";
+    if (typeof s.follow === "boolean" && !followBusy) {
+      document.getElementById("followSwitch").checked = s.follow;
+      document.getElementById("followWord").textContent = s.follow ? "On" : "Off";
+    }
     $("iUptime", fmtUptime(s.uptime_s || 0));
     $("iFps", s.fps !== undefined ? String(s.fps) : "--");
     $("iCpu", (s.cpu_load !== undefined ? s.cpu_load + "%" : "--") + (s.cpu_mhz ? " · " + s.cpu_mhz + " MHz" : ""));
@@ -960,6 +986,24 @@ function powerPost(query) {
     .then(function (r) { return r.json(); })
     .catch(function () { return { ok: false }; });
 }
+var followBusy = false;
+document.getElementById("followSwitch").addEventListener("change", function () {
+  var sw = this;
+  followBusy = true;
+  document.getElementById("followWord").textContent = sw.checked ? "On" : "Off";
+  powerPost("action=" + (sw.checked ? "follow_on" : "follow_off")).then(function (r) {
+    if (r && r.ok === false) { sw.checked = !sw.checked; jconfirm(r.message || "That did not work.", "OK", false); }
+    setTimeout(function () { followBusy = false; loadStatus(); }, 700);
+  });
+});
+document.getElementById("faceBtn").addEventListener("click", function () {
+  var btn = this;
+  btn.disabled = true;
+  powerPost("action=face").then(function (r) {
+    if (r && r.ok === false) jconfirm(r.message || "That did not work.", "OK", false);
+    setTimeout(function () { btn.disabled = false; }, 6000);
+  });
+});
 var isMuted = false;
 document.getElementById("muteBtn").addEventListener("click", function () {
   var btn = this;
@@ -1358,7 +1402,7 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
     "Shows what the robot sees while you drive: a new picture about once a second, only while this page is open (stops after 3 minutes)": "Toont wat de robot ziet terwijl je rijdt: ongeveer elke seconde een nieuw beeld, alleen zolang deze pagina open is (stopt na 3 minuten)",
     "Live view stopped after 3 minutes. Tap Live view to continue.": "Live beeld gestopt na 3 minuten. Tik op Live beeld om door te gaan.",
     "Loading settings...": "Instellingen laden...", "Could not load settings.": "Kon de instellingen niet laden.",
-    "Motors": "Motoren", "Audio and wake word": "Audio en wekwoord", "Screen and quiet hours": "Scherm en stille uren", "Weather": "Weer", "Visualizer": "Visualizer",
+    "Motors": "Motoren", "Face and movement": "Gezicht en bewegen", "Audio and wake word": "Audio en wekwoord", "Screen and quiet hours": "Scherm en stille uren", "Weather": "Weer", "Visualizer": "Visualizer",
     "System": "Systeem", "Other": "Overig",
     "Reset all to defaults": "Alles terugzetten naar standaard", "Sets every robot setting back to its default": "Zet elke robotinstelling terug naar de standaardwaarde",
     "Reset every setting to its default? This cannot be undone.": "Elke instelling terugzetten naar de standaardwaarde? Dit kan niet ongedaan worden gemaakt.",
@@ -1370,6 +1414,14 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
     // settings: labels, values, placeholders
     "Top speed": "Topsnelheid", "Steering trim": "Stuurcorrectie", "Turn duration (90°)": "Draaitijd (90°)", "Right motor direction": "Richting rechtermotor",
     "Left motor direction": "Richting linkermotor", "Swap left/right": "Links/rechts omwisselen", "Soft start ramp": "Zachte start", "Microphone gain": "Microfoonversterking",
+    "Follow me": "Volg mij", "Face me": "Naar mij kijken", "On": "Aan", "Off": "Uit",
+    "Jarvis turns on the spot towards your face. Keep it on a flat table with room to turn.": "Jarvis draait op de plek naar je gezicht. Zet hem op een vlakke tafel met ruimte om te draaien.",
+    "Follow mode: while Jarvis is idle it keeps turning towards your face. It needs your own voice server and your face in front of the camera, and it is always off again after a restart": "Volgmodus: zolang Jarvis niets doet blijft hij naar je gezicht draaien. Hij heeft je eigen spraakserver nodig en je gezicht voor de camera, en staat na een herstart altijd weer uit",
+    "Look at you once: takes a picture, finds your face and turns in up to three short steps": "Kijkt één keer naar je: neemt een foto, vindt je gezicht en draait in maximaal drie korte stappen",
+    "Move while talking": "Bewegen tijdens praten", "Talking movement power": "Kracht van de praatbewegingen", "Follow: time between looks": "Volgen: tijd tussen twee blikken",
+    "Face turn: small step": "Gezichtsdraai: kleine stap", "Face turn: medium step": "Gezichtsdraai: middelgrote stap", "Face turn: big step": "Gezichtsdraai: grote stap", "Face turn: swap left/right": "Gezichtsdraai: links/rechts omwisselen",
+    "Looking for your face.": "Zoekt je gezicht.", "Follow mode on: Jarvis turns towards your face.": "Volgmodus aan: Jarvis draait naar je gezicht.", "Follow mode off.": "Volgmodus uit.",
+    "Follow mode needs your own voice server.": "Volgmodus heeft je eigen spraakserver nodig.", "Turning to your face needs your own voice server.": "Naar je gezicht draaien heeft je eigen spraakserver nodig.",
     "Wake sensitivity": "Wekgevoeligheid", "Camera shutter sound": "Sluitergeluid camera", "Camera brightness": "Camerahelderheid", "Wake chirp": "Wektjilp",
     "Idle clock after": "Klok bij inactiviteit na", "Quiet hours start": "Stille uren begin", "Quiet hours end": "Stille uren einde", "Weather city": "Plaats voor het weer",
     "Speaking screen effect": "Schermeffect tijdens praten", "Music screen picture": "Afbeelding muziekscherm", "Log detail": "Logdetail",
@@ -1405,7 +1457,9 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
   };
   var KEYS = { motor_max_speed: "Topsnelheid", motor_trim: "Stuurcorrectie", turn_ms_per_90: "Draaitijd (90°)", motor_a_invert: "Richting rechtermotor", motor_b_invert: "Richting linkermotor",
     motor_swap: "Links/rechts omwisselen", soft_start_ms: "Zachte start", mic_gain_db: "Microfoonversterking", wake_threshold: "Wekgevoeligheid", shutter_sound: "Sluitergeluid camera",
-    camera_brightness: "Camerahelderheid", wake_chirp: "Wektjilp", idle_clock_min: "Klok bij inactiviteit na", quiet_start: "Stille uren begin", quiet_end: "Stille uren einde",
+    camera_brightness: "Camerahelderheid", camera_saturation: "Camerakleur", wake_chirp: "Wektjilp", idle_clock_min: "Klok bij inactiviteit na", quiet_start: "Stille uren begin", quiet_end: "Stille uren einde",
+    talk_motion: "Bewegen tijdens praten", talk_power: "Kracht praatbewegingen", follow_mode: "Volg mij", follow_ms: "Volgen: tijd tussen blikken",
+    face_short_ms: "Gezichtsdraai: kleine stap", face_mid_ms: "Gezichtsdraai: middelgrote stap", face_long_ms: "Gezichtsdraai: grote stap", face_invert: "Gezichtsdraai: links/rechts omwisselen",
     weather_city: "Plaats voor het weer", visualizer_mode: "Schermeffect tijdens praten", music_icon: "Afbeelding muziekscherm", log_level: "Logdetail" };
   function dur(s, wake) {   // "for 1 hr 30 min" / "until you press the BOOT button"
     if (s === "until you press the BOOT button") return "tot je op de BOOT-knop drukt";
@@ -1438,7 +1492,8 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
     ["Beweging", [
       ["Rijden, draaien, stoppen", "“drive forward for two seconds”, “turn around”, “stop”"],
       ["Dansen", "“do a little dance” (willekeurig, wiebelen, draaien of vrolijk)"],
-      ["Rondkijken", "“look around the room” (4 foto’s, één gecombineerd antwoord)"]
+      ["Rondkijken", "“look around the room” (4 foto’s, één gecombineerd antwoord)"],
+      ["Naar mij kijken, mij volgen", "“look at me” / “kijk naar mij” (draait naar je gezicht), “follow me” / “volg me” en “stop following me” / “stop met volgen”"]
     ]],
     ["Scherm", [
       ["Spreekeffect", "“switch the screen effect to radial” (off, winamp, rainbow, scope, radial, vu, mouth, orb)"],
@@ -1487,6 +1542,9 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
       ["Rijden", "“go forward”, “go back”, “go forward for 3 seconds”"],
       ["Kom hier", "“come here” / “kom hier”: één seconde rechtdoor op volle kracht"],
       ["Draaien", "“turn left”, “turn right”, “turn around”"],
+      ["Kijk naar mij", "“look at me” / “kijk naar mij”: een foto, daarna een paar korte draaien tot Jarvis naar je gezicht kijkt"],
+      ["Volg me", "“follow me” / “volg me”, “stop following me” / “stop met volgen”: blijft naar je gezicht draaien zolang hij niets doet (na een herstart weer uit)"],
+      ["Bewegen tijdens praten", "“don't move while you talk” / “beweeg niet tijdens het praten” en “move when you talk”"],
       ["Dansen", "“dance”"]
     ], true],
     ["Direct: geluid en scherm", [
