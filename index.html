@@ -434,7 +434,7 @@ var COLLAPSIBLE = { "Motors": true, "Face and movement": true, "Audio and wake w
 var openGroups = {};
 var GROUPS = [
   ["Motors", ["motor_trim", "turn_ms_per_90", "motor_a_invert", "motor_b_invert", "motor_swap", "soft_start_ms"]],
-  ["Face and movement", ["talk_motion", "talk_power", "follow_ms", "face_short_ms", "face_mid_ms", "face_long_ms", "face_invert"]],
+  ["Face and movement", ["talk_motion", "talk_power", "face_power", "follow_ms", "face_short_ms", "face_mid_ms", "face_long_ms", "face_invert"]],
   ["Audio and wake word", ["mic_gain_db", "wake_threshold", "wake_chirp"]],
   ["Screen and quiet hours", ["idle_clock_min", "quiet_start", "quiet_end"]],
   ["Weather", ["weather_city"]],
@@ -448,7 +448,7 @@ var LABELS = {
   soft_start_ms: "Soft start ramp", mic_gain_db: "Microphone gain", wake_threshold: "Wake sensitivity",
   shutter_sound: "Camera shutter sound", camera_brightness: "Camera brightness", camera_saturation: "Camera colour", wake_chirp: "Wake chirp",
   idle_clock_min: "Idle clock after", quiet_start: "Quiet hours start", quiet_end: "Quiet hours end",
-  talk_motion: "Move while talking", talk_power: "Talking movement power", follow_mode: "Follow me", follow_ms: "Follow: time between looks",
+  talk_motion: "Move while talking", talk_power: "Talking movement power", face_power: "Face and follow turn power", follow_mode: "Follow me", follow_ms: "Follow: time between looks",
   face_short_ms: "Face turn: small step", face_mid_ms: "Face turn: medium step", face_long_ms: "Face turn: big step", face_invert: "Face turn: swap left/right",
   weather_city: "Weather city", visualizer_mode: "Speaking screen effect", music_icon: "Music screen picture", log_level: "Log detail"
 };
@@ -705,7 +705,7 @@ function fmtValue(def) {
   if (def.kind === "enum") return def.value;
   var unit = def.key.indexOf("_ms") >= 0 || def.key === "turn_ms_per_90" ? " ms"
     : def.key === "mic_gain_db" ? " dB"
-    : def.key.indexOf("speed") >= 0 || def.key === "talk_power" ? "%"
+    : def.key.indexOf("speed") >= 0 || def.key === "talk_power" || def.key === "face_power" ? "%"
     : def.key === "idle_clock_min" ? " min"
     : "";
   return def.value + unit;
@@ -1418,7 +1418,7 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
     "Jarvis turns on the spot towards your face. Keep it on a flat table with room to turn.": "Jarvis draait op de plek naar je gezicht. Zet hem op een vlakke tafel met ruimte om te draaien.",
     "Follow mode: while Jarvis is idle it keeps turning towards your face. It needs your own voice server and your face in front of the camera, and it is always off again after a restart": "Volgmodus: zolang Jarvis niets doet blijft hij naar je gezicht draaien. Hij heeft je eigen spraakserver nodig en je gezicht voor de camera, en staat na een herstart altijd weer uit",
     "Look at you once: takes a picture, finds your face and turns in up to three short steps": "Kijkt één keer naar je: neemt een foto, vindt je gezicht en draait in maximaal drie korte stappen",
-    "Move while talking": "Bewegen tijdens praten", "Talking movement power": "Kracht van de praatbewegingen", "Follow: time between looks": "Volgen: tijd tussen twee blikken",
+    "Move while talking": "Bewegen tijdens praten", "Talking movement power": "Kracht van de praatbewegingen", "Face and follow turn power": "Kracht van gezichts- en volgdraaien", "Follow: time between looks": "Volgen: tijd tussen twee blikken",
     "Face turn: small step": "Gezichtsdraai: kleine stap", "Face turn: medium step": "Gezichtsdraai: middelgrote stap", "Face turn: big step": "Gezichtsdraai: grote stap", "Face turn: swap left/right": "Gezichtsdraai: links/rechts omwisselen",
     "Looking for your face.": "Zoekt je gezicht.", "Follow mode on: Jarvis turns towards your face.": "Volgmodus aan: Jarvis draait naar je gezicht.", "Follow mode off.": "Volgmodus uit.",
     "Follow mode needs your own voice server.": "Volgmodus heeft je eigen spraakserver nodig.", "Turning to your face needs your own voice server.": "Naar je gezicht draaien heeft je eigen spraakserver nodig.",
@@ -1458,7 +1458,7 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
   var KEYS = { motor_max_speed: "Topsnelheid", motor_trim: "Stuurcorrectie", turn_ms_per_90: "Draaitijd (90°)", motor_a_invert: "Richting rechtermotor", motor_b_invert: "Richting linkermotor",
     motor_swap: "Links/rechts omwisselen", soft_start_ms: "Zachte start", mic_gain_db: "Microfoonversterking", wake_threshold: "Wekgevoeligheid", shutter_sound: "Sluitergeluid camera",
     camera_brightness: "Camerahelderheid", camera_saturation: "Camerakleur", wake_chirp: "Wektjilp", idle_clock_min: "Klok bij inactiviteit na", quiet_start: "Stille uren begin", quiet_end: "Stille uren einde",
-    talk_motion: "Bewegen tijdens praten", talk_power: "Kracht praatbewegingen", follow_mode: "Volg mij", follow_ms: "Volgen: tijd tussen blikken",
+    talk_motion: "Bewegen tijdens praten", talk_power: "Kracht praatbewegingen", face_power: "Kracht gezichts- en volgdraaien", follow_mode: "Volg mij", follow_ms: "Volgen: tijd tussen blikken",
     face_short_ms: "Gezichtsdraai: kleine stap", face_mid_ms: "Gezichtsdraai: middelgrote stap", face_long_ms: "Gezichtsdraai: grote stap", face_invert: "Gezichtsdraai: links/rechts omwisselen",
     weather_city: "Plaats voor het weer", visualizer_mode: "Schermeffect tijdens praten", music_icon: "Afbeelding muziekscherm", log_level: "Logdetail" };
   function dur(s, wake) {   // "for 1 hr 30 min" / "until you press the BOOT button"
