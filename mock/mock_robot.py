@@ -97,7 +97,7 @@ def volume_requested():
 def status(host=""):
     s = STATE
     return {
-        "board": "wall-e-xiao/2.5.0", "board_name": "ESP32 S3 Sense", "camera_detected": True, "camera_sensor": "OV3660",
+        "revision": 86, "board": "wall-e-xiao/2.5.0", "board_name": "ESP32 S3 Sense", "camera_detected": True, "camera_sensor": "OV3660",
         "ssid": "HomeWiFi", "ip": "192.168.1.50", "mac": "AA:BB:CC:DD:EE:FF", "rssi": -51,
         "uptime_s": int(time.time() - s["started"]) + 946, "state": 3, "napping": s["napping"],
         "muted": bool(s.get("muted")), "follow": bool(s.get("follow")), "cpu_load": 42, "fps": 27, "heap_largest_kb": 61, "chip_temp_c": 47.5, "wifi_disconnects": 1, "wifi_last_reason": 200,
