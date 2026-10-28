@@ -334,6 +334,7 @@
       <div class="irow"><span class="k">Mode</span><span class="v" id="iMode"></span></div>
       <div class="irow"><span class="k">Status</span><span class="v state" id="iStatus"></span></div>
       <div class="irow" id="iBrainRow" style="display:none"><span class="k">Brain</span><span class="v" id="iBrain"></span></div>
+      <div class="irow" id="iFaceRow" style="display:none"><span class="k">Face finding</span><span class="v" id="iFace"></span></div>
       <div class="irow"><span class="k">Uptime</span><span class="v" id="iUptime"></span></div>
     </div>
     <div class="icol right">
@@ -614,6 +615,33 @@ function loadBrainStatus() {
     s.remove();
   };
   s.onerror = function () { brainNext = Date.now() + 30000; row.style.display = "none"; s.remove(); };
+  document.head.appendChild(s);
+}
+var faceNext = 0;
+// Which face finder works on the backend, does it know you, and what did the last look find? Asked of the backend (a script include, like brain.js).
+// A backend without face.js (an older one) simply leaves the row out.
+function loadFaceStatus() {
+  var row = document.getElementById("iFaceRow");
+  if (!panelUrl) { row.style.display = "none"; return; }
+  if (Date.now() < faceNext) return;
+  faceNext = Date.now() + 5000;
+  window.JARVIS_FACE = null;
+  var s = document.createElement("script");
+  s.src = panelUrl + "face.js?" + Date.now();
+  s.onload = function () {
+    var f = window.JARVIS_FACE || {};
+    if (!f.using) { row.style.display = "none"; s.remove(); return; }
+    var text = f.using === "yunet" ? "YuNet" : "Haar";
+    if (f.enrolled && f.recognition) text += f.only_owner ? " · only you" : " · knows you";
+    if (f.last && f.ago != null && f.ago < 3600) {
+      var who = { owner: "you", other: "somebody else", nobody: "nobody", face: "a face" }[f.last] || f.last;
+      text += " · last look: " + who + " (" + f.ago + " s ago)";
+    }
+    row.style.display = "";
+    document.getElementById("iFace").textContent = text;
+    s.remove();
+  };
+  s.onerror = function () { faceNext = Date.now() + 30000; row.style.display = "none"; s.remove(); };
   document.head.appendChild(s);
 }
 var haOk = false, haNext = 0;
@@ -1095,6 +1123,7 @@ function renderServer(s) {
   loadHaStatus();
   loadMusicStatus();
   loadBrainStatus();
+  loadFaceStatus();
 }
 document.getElementById("advBtn").addEventListener("click", function () {
   if (panelUrl) window.open(panelUrl + "auto", "_blank");
@@ -1370,7 +1399,7 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
 (function () {
   var NL = {
     // header and info table
-    "Jarvis settings": "Jarvis-instellingen", "Advanced ↗": "Geavanceerd ↗",
+    "Jarvis settings": "Jarvis-instellingen", "Face finding": "Gezichtsherkenning", "Advanced ↗": "Geavanceerd ↗",
     "The backend control panel on your PC: servers, brains, voices, keys": "Het bedieningspaneel van de backend op je pc: servers, breinen, stemmen, sleutels",
     "Loading...": "Laden...", "Board": "Bord", "Chip temperature": "Chiptemperatuur", "Camera detected": "Camera gevonden", "MAC address": "MAC-adres",
     "Mode": "Modus", "Brain": "Brein", "Uptime": "Looptijd", "YES": "JA", "NO": "NEE", "Console": "Console", "Battery": "Batterij", "timeout": "time-out",
@@ -1469,6 +1498,10 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
   var RULES = [
     [/^Playing: ([\s\S]+)$/, function (r) { return "Speelt: " + r[1]; }],
     [/^([\s\S]+) \(backup\)$/, function (r) { return r[1] + " (reserve)"; }],
+    [/^(YuNet|Haar)(?: · (knows you|only you))?(?: · last look: (you|somebody else|nobody|a face) \((\d+) s ago\))?$/, function (r) {
+      var who = { "you": "jij", "somebody else": "iemand anders", "nobody": "niemand", "a face": "een gezicht" };
+      return r[1] + (r[2] ? " · " + (r[2] === "knows you" ? "kent jou" : "alleen jij") : "") + (r[3] ? " · laatste blik: " + who[r[3]] + " (" + r[4] + " s geleden)" : "");
+    }],
     [/^The main brain \((.*)\) failed(?: \((.*)\))?, so a backup answered the last question$/, function (r) { return "Het hoofdbrein (" + r[1] + ") faalde" + (r[2] ? " (" + r[2] + ")" : "") + ", dus een reserve beantwoordde de laatste vraag"; }],
     [/^YES \((.*)\)$/, function (r) { return "JA (" + r[1] + ")"; }],
     [/^([\d.]+) MB free$/, function (r) { return r[1] + " MB vrij"; }],
