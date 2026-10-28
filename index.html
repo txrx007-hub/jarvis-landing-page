@@ -634,7 +634,7 @@ function loadFaceStatus() {
     var text = f.using === "yunet" ? "YuNet" : "Haar";
     if (f.enrolled && f.recognition) text += f.only_owner ? " · only you" : " · knows you";
     if (f.last && f.ago != null && f.ago < 3600) {
-      var who = { owner: "you", other: "somebody else", nobody: "nobody", face: "a face" }[f.last] || f.last;
+      var who = { owner: "you", maybe: "unsure", other: "somebody else", nobody: "nobody", poor: "a poor picture", face: "a face" }[f.last] || f.last;
       text += " · last look: " + who + " (" + f.ago + " s ago)";
     }
     row.style.display = "";
@@ -1498,8 +1498,8 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
   var RULES = [
     [/^Playing: ([\s\S]+)$/, function (r) { return "Speelt: " + r[1]; }],
     [/^([\s\S]+) \(backup\)$/, function (r) { return r[1] + " (reserve)"; }],
-    [/^(YuNet|Haar)(?: · (knows you|only you))?(?: · last look: (you|somebody else|nobody|a face) \((\d+) s ago\))?$/, function (r) {
-      var who = { "you": "jij", "somebody else": "iemand anders", "nobody": "niemand", "a face": "een gezicht" };
+    [/^(YuNet|Haar)(?: · (knows you|only you))?(?: · last look: (you|unsure|somebody else|nobody|a poor picture|a face) \((\d+) s ago\))?$/, function (r) {
+      var who = { "you": "jij", "unsure": "onzeker", "somebody else": "iemand anders", "nobody": "niemand", "a poor picture": "een slechte foto", "a face": "een gezicht" };
       return r[1] + (r[2] ? " · " + (r[2] === "knows you" ? "kent jou" : "alleen jij") : "") + (r[3] ? " · laatste blik: " + who[r[3]] + " (" + r[4] + " s geleden)" : "");
     }],
     [/^The main brain \((.*)\) failed(?: \((.*)\))?, so a backup answered the last question$/, function (r) { return "Het hoofdbrein (" + r[1] + ") faalde" + (r[2] ? " (" + r[2] + ")" : "") + ", dus een reserve beantwoordde de laatste vraag"; }],
