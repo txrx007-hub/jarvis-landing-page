@@ -22,7 +22,7 @@ deep sleep. Replies are `application/json` unless noted. `<ip>` is the robot's a
 | POST | `/api/server` | Choose the voice server: the xiaozhi.me cloud or an own server on the LAN |
 | GET | `/api/net` | What the robot has sent and received over Wi-Fi since it started: `tx_pkts`, `rx_pkts`, `tx_bytes`, `rx_bytes` (32 bit counters that wrap) and `t_ms` (its clock). Counted where lwIP meets the Wi-Fi driver, so it is every IP packet of the robot. About 100 bytes, meant to be asked a few times a second; a reader works out the rates from two readings |
 | POST | `/api/stop` | Stop what Jarvis is saying or playing (a song, a radio stream) at once; the page's Stop button |
-| POST | `/api/photo` | One JPEG from the camera (`?live=1` for the live view: smaller picture, nothing shown on the robot's own screen; taken in a task of its own so driving keeps working) (the page and the app hand it to the backend panel, `POST /api/dcim`, which keeps it in `dcim/` on the PC) (`503` with a text reason when there is no camera, or while napping); the page's Camera button |
+| POST | `/api/photo` | One JPEG from the camera (`?live=1` for the live view: smaller picture, nothing shown on the robot's own screen; taken in a task of its own so driving keeps working; a failure answers 500 with the reason, e.g. `the camera did not deliver a picture: the picture could not be turned into a JPEG (memory)`, firmware build 82 and newer; a failed picture is tried a second time first) (the page and the app hand it to the backend panel, `POST /api/dcim`, which keeps it in `dcim/` on the PC) (`503` with a text reason when there is no camera, or while napping); the page's Camera button |
 
 ## GET /api/status
 
@@ -97,7 +97,7 @@ itself. `l=0&r=0` stops immediately and cancels any queued movement.
 |---|---|---|
 | `nap` | | Light standby, starts about 2 s later |
 | `mute` / `unmute` | | The microphone reads silence until unmuted or until the robot restarts (nothing is saved; `muted` in `/api/status`). The speaker stays on |
-| `follow_on` / `follow_off` | | Follow mode (the `follow_mode` setting, always off after a restart): while Jarvis is idle it keeps turning on the spot towards your face. Needs the own voice server; reported as `follow` in `/api/status` (firmware build 81 and newer) |
+| `follow_on` / `follow_off` | | Follow mode (the `follow_mode` setting, always off after a restart): while Jarvis is idle it keeps turning on the spot towards your face. Needs the own voice server; reported as `follow` in `/api/status` (firmware build 81 and newer). The setting `face_invert` (default on since build 82: the camera picture is mirrored against the wheels, so left and right are swapped) |
 | `face` | | Looks at you once: one picture, the own server finds the face, up to three short full-power turns until Jarvis faces it (about 3 to 8 s, the answer comes at once). Needs the own voice server |
 | `wake` | | Leaves the nap |
 | `deepsleep` | `minutes=0..1440` | Everything off including WiFi, starts about 2 s later; `0` = until the BOOT button is pressed. Only the timer or the BOOT button wakes the robot; this API cannot. |

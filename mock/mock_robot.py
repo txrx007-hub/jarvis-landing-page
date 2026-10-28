@@ -41,7 +41,7 @@ DEFAULT_SETTINGS = [
     {"key": "face_short_ms", "kind": "int", "help": "turn towards your face: a small correction, in milliseconds at full power", "min": 100, "max": 1500, "step": 1, "value": 300},
     {"key": "face_mid_ms", "kind": "int", "help": "turn towards your face: a medium correction, in milliseconds at full power", "min": 100, "max": 2000, "step": 1, "value": 500},
     {"key": "face_long_ms", "kind": "int", "help": "turn towards your face: a big correction, in milliseconds at full power", "min": 100, "max": 3000, "step": 1, "value": 1000},
-    {"key": "face_invert", "kind": "bool", "help": "swap left and right if Jarvis turns away from your face", "value": False},
+    {"key": "face_invert", "kind": "bool", "help": "swap left and right if Jarvis turns away from your face", "value": True},
     {"key": "wake_chirp", "kind": "bool", "help": "short chirp right after the wake word", "value": True},
     {"key": "idle_clock_min", "kind": "int", "help": "minutes of idle before the clock shows", "min": 0, "max": 60, "step": 1, "value": 5},
     {"key": "quiet_start", "kind": "time", "help": "night mode start, HH:MM or off", "value": "22:30"},
