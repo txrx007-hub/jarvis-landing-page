@@ -37,7 +37,7 @@ DEFAULT_SETTINGS = [
     {"key": "talk_motion", "kind": "bool", "help": "small left and right body movements while Jarvis is speaking", "value": True},
     {"key": "talk_power", "kind": "int", "help": "power of those talking movements, in percent (20 is a small twitch, 100 a big shake)", "min": 20, "max": 100, "step": 1, "value": 80},
     {"key": "face_power", "kind": "int", "help": "power of the turns towards your face and of follow mode, in percent (100 = full power)", "min": 30, "max": 100, "step": 1, "value": 100},
-    {"key": "follow_ms", "kind": "int", "help": "follow mode: pause between two looks, in milliseconds", "min": 400, "max": 5000, "step": 1, "value": 1000},
+    {"key": "follow_ms", "kind": "int", "help": "follow mode: pause between two looks, in milliseconds", "min": 100, "max": 5000, "step": 1, "value": 1000},
     {"key": "face_short_ms", "kind": "int", "help": "turn towards your face: a small correction, in milliseconds at full power", "min": 100, "max": 1500, "step": 1, "value": 300},
     {"key": "face_mid_ms", "kind": "int", "help": "turn towards your face: a medium correction, in milliseconds at full power", "min": 100, "max": 2000, "step": 1, "value": 500},
     {"key": "face_long_ms", "kind": "int", "help": "turn towards your face: a big correction, in milliseconds at full power", "min": 100, "max": 3000, "step": 1, "value": 1000},
