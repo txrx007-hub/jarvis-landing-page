@@ -327,7 +327,6 @@
   <div id="info">
     <div class="icol">
       <div class="irow"><span class="k">Board</span><span class="v" id="iBoard"></span></div>
-      <div class="irow"><span class="k">Revision</span><span class="v" id="iRevision"></span></div>
       <div class="irow" id="iTempRow" style="display:none"><span class="k">Chip temperature</span><span class="v" id="iTemp"></span></div>
       <div class="irow"><span class="k">Camera detected</span><span class="v" id="iCamera"></span></div>
       <div class="irow"><span class="k">MAC address</span><span class="v" id="iMac"></span></div>
@@ -414,7 +413,7 @@
   </div>
   <div id="sections">Loading settings...</div>
   <button id="reset" data-hint="Sets every robot setting back to its default">Reset all to defaults</button>
-  <footer>Changes apply and save right away. On your home network only.</footer>
+  <footer>Changes apply and save right away. On your home network only.<div id="revLabel" style="text-align:left; margin-top:10px"></div></footer>
   <div class="theme-bar">
     <div class="lang-sw" role="group" aria-label="Language"><button type="button" data-lang="en" aria-pressed="true">EN</button><button type="button" data-lang="nl" aria-pressed="false">NL</button></div>
     <select id="paletteSel" title="Colour theme" aria-label="Colour theme"><option value="classic">Classic</option><option value="blueberry">Blueberry</option><option value="succulent">Succulent</option><option value="peach">Peach</option></select>
@@ -936,7 +935,7 @@ function loadStatus() {
     var stateName = s.napping ? "napping" : (STATE_NAMES[s.state] || "state " + s.state);
     if (!s.napping && STATE_NAMES[s.state] === "speaking" && musicPlaying) stateName = "music mode";
     $("iBoard", s.board_name || (s.board || "").split("/")[0]);
-    $("iRevision", s.revision ? "r" + s.revision : "--");
+    $("revLabel", s.revision ? "Rev " + s.revision : "");
     $("iCamera", s.camera_detected ? "YES" + (s.camera_sensor ? " (" + s.camera_sensor + ")" : "") : "NO");
     $("iMac", s.mac || "");
     $("iMode", s.power === "console" ? "Console" : (s.power ? "Battery" : ""));
@@ -1373,7 +1372,7 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
     // header and info table
     "Jarvis settings": "Jarvis-instellingen", "Advanced ↗": "Geavanceerd ↗",
     "The backend control panel on your PC: servers, brains, voices, keys": "Het bedieningspaneel van de backend op je pc: servers, breinen, stemmen, sleutels",
-    "Loading...": "Laden...", "Board": "Bord", "Revision": "Revisie", "Chip temperature": "Chiptemperatuur", "Camera detected": "Camera gevonden", "MAC address": "MAC-adres",
+    "Loading...": "Laden...", "Board": "Bord", "Chip temperature": "Chiptemperatuur", "Camera detected": "Camera gevonden", "MAC address": "MAC-adres",
     "Mode": "Modus", "Brain": "Brein", "Uptime": "Looptijd", "YES": "JA", "NO": "NEE", "Console": "Console", "Battery": "Batterij", "timeout": "time-out",
     "no ip": "geen ip", "Could not reach Jarvis": "Kan Jarvis niet bereiken",
     // states
