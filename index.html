@@ -435,7 +435,7 @@ var COLLAPSIBLE = { "Motors": true, "Face and movement": true, "Audio and wake w
 var openGroups = {};
 var GROUPS = [
   ["Motors", ["motor_trim", "turn_ms_per_90", "motor_a_invert", "motor_b_invert", "motor_swap", "soft_start_ms"]],
-  ["Face and movement", ["talk_motion", "talk_power", "face_power", "face_deadzone", "follow_ms", "face_invert"]],
+  ["Face and movement", ["talk_motion", "talk_power", "talk_alternate", "face_power", "face_deadzone", "follow_ms", "face_invert"]],
   ["Audio and wake word", ["mic_gain_db", "wake_threshold", "wake_chirp"]],
   ["Screen and quiet hours", ["idle_clock_min", "quiet_start", "quiet_end"]],
   ["Weather", ["weather_city"]],
@@ -449,7 +449,7 @@ var LABELS = {
   soft_start_ms: "Soft start ramp", mic_gain_db: "Microphone gain", wake_threshold: "Wake sensitivity",
   shutter_sound: "Camera shutter sound", camera_brightness: "Camera brightness", camera_saturation: "Camera colour", wake_chirp: "Wake chirp",
   idle_clock_min: "Idle clock after", quiet_start: "Quiet hours start", quiet_end: "Quiet hours end",
-  talk_motion: "Move while talking", talk_power: "Talking movement power", face_power: "Face turn: maximum power", face_deadzone: "Face turn: centre margin", follow_mode: "Follow me", follow_ms: "Follow: time between looks", face_invert: "Face turn: swap left/right",
+  talk_motion: "Move while talking", talk_power: "Talking movement power", talk_alternate: "Talking: one wheel at a time", face_power: "Face turn: maximum power", face_deadzone: "Face turn: centre margin", follow_mode: "Follow me", follow_ms: "Follow: time between looks", face_invert: "Face turn: swap left/right",
   weather_city: "Weather city", visualizer_mode: "Speaking screen effect", music_icon: "Music screen picture", log_level: "Log detail"
 };
 var PLACEHOLDERS = {
@@ -1487,7 +1487,7 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
   var KEYS = { motor_max_speed: "Topsnelheid", motor_trim: "Stuurcorrectie", turn_ms_per_90: "Draaitijd (90°)", motor_a_invert: "Richting rechtermotor", motor_b_invert: "Richting linkermotor",
     motor_swap: "Links/rechts omwisselen", soft_start_ms: "Zachte start", mic_gain_db: "Microfoonversterking", wake_threshold: "Wekgevoeligheid", shutter_sound: "Sluitergeluid camera",
     camera_brightness: "Camerahelderheid", camera_saturation: "Camerakleur", wake_chirp: "Wektjilp", idle_clock_min: "Klok bij inactiviteit na", quiet_start: "Stille uren begin", quiet_end: "Stille uren einde",
-    talk_motion: "Bewegen tijdens praten", talk_power: "Kracht praatbewegingen", face_power: "Gezichtsdraai: maximale kracht", face_deadzone: "Gezichtsdraai: marge rond het midden", follow_mode: "Volg mij", follow_ms: "Volgen: tijd tussen blikken", face_invert: "Gezichtsdraai: links/rechts omwisselen",
+    talk_motion: "Bewegen tijdens praten", talk_power: "Kracht praatbewegingen", talk_alternate: "Praten: één wiel tegelijk", face_power: "Gezichtsdraai: maximale kracht", face_deadzone: "Gezichtsdraai: marge rond het midden", follow_mode: "Volg mij", follow_ms: "Volgen: tijd tussen blikken", face_invert: "Gezichtsdraai: links/rechts omwisselen",
     weather_city: "Plaats voor het weer", visualizer_mode: "Schermeffect tijdens praten", music_icon: "Afbeelding muziekscherm", log_level: "Logdetail" };
   function dur(s, wake) {   // "for 1 hr 30 min" / "until you press the BOOT button"
     if (s === "until you press the BOOT button") return "tot je op de BOOT-knop drukt";

@@ -36,6 +36,7 @@ DEFAULT_SETTINGS = [
     {"key": "camera_saturation", "kind": "int", "help": "camera colour saturation: higher for stronger colours, lower for paler ones (0 = sensor default)", "min": -4, "max": 4, "step": 1, "value": 0},
     {"key": "talk_motion", "kind": "bool", "help": "small left and right body movements while Jarvis is speaking", "value": True},
     {"key": "talk_power", "kind": "int", "help": "power of those talking movements, in percent (20 is a small twitch, 100 a big shake)", "min": 20, "max": 100, "step": 1, "value": 80},
+    {"key": "talk_alternate", "kind": "bool", "help": "talking movements swing from one wheel at a time, left then right then left (off: both wheels turn the body on the spot)", "value": True},
     {"key": "face_power", "kind": "int", "help": "power of the turns towards your face and of follow mode, in percent (100 = full power)", "min": 30, "max": 100, "step": 1, "value": 100},
     {"key": "face_deadzone", "kind": "int", "help": "how far off-centre your face may be, in percent of half the picture, before Jarvis turns at all", "min": 5, "max": 40, "step": 1, "value": 18},
     {"key": "follow_ms", "kind": "int", "help": "follow mode: pause between two looks, in milliseconds", "min": 100, "max": 5000, "step": 1, "value": 1000},
