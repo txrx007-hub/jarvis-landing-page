@@ -367,6 +367,10 @@
       <label class="theme-switch" data-hint="Follow mode: while Jarvis is idle it keeps turning towards your face. It needs your own voice server and your face in front of the camera, and it is always off again after a restart"><span id="followWord">Off</span><input type="checkbox" id="followSwitch" aria-label="Follow mode"><span class="track"></span></label>
     </div>
     <p class="fhint">Jarvis turns on the spot towards your face. Keep it on a flat table with room to turn.</p>
+    <div class="prow" id="eyesRow"><b>Eyes follow me</b>
+      <label class="theme-switch" data-hint="Eyes follow me: while Jarvis is idle its eyes on the screen look towards your face, and Jarvis stays where it is. It needs your own voice server and your face in front of the camera. Follow me and Face me use the eyes too"><span id="eyesWord">Off</span><input type="checkbox" id="eyesSwitch" aria-label="Eyes follow me"><span class="track"></span></label>
+    </div>
+    <p class="fhint">Only the eyes move; Jarvis stays where it is, unless Follow me is on. It takes a picture every second or so while idle.</p>
     <div class="fbtns"><button id="faceBtn" class="secondary" data-hint="Look at you once: takes a picture, finds your face and turns in up to three short steps">Face me</button></div>
   </div>
   <div id="power" class="card">
@@ -428,14 +432,14 @@
 </div>
 <script>
 // Settings that exist on the device but are not offered on the page (fixed at their defaults).
-var HIDDEN = { motor_max_speed: true, shutter_sound: true, follow_mode: true };   // follow_mode has its own card
+var HIDDEN = { motor_max_speed: true, shutter_sound: true, follow_mode: true, eyes_follow: true, eye_color: true };   // follow_mode and eyes_follow have their own switches in the Follow me card
 // Groups control section order and titles; any key not listed lands in "Other".
 // Groups shown as a toggle button that expands to their settings (remembered while the page is open).
 var COLLAPSIBLE = { "Motors": true, "Face and movement": true, "Audio and wake word": true, "Screen and quiet hours": true };
 var openGroups = {};
 var GROUPS = [
   ["Motors", ["motor_trim", "turn_ms_per_90", "motor_a_invert", "motor_b_invert", "motor_swap", "soft_start_ms"]],
-  ["Face and movement", ["talk_motion", "talk_power", "talk_alternate", "face_power", "face_deadzone", "follow_ms", "face_invert"]],
+  ["Face and movement", ["talk_motion", "talk_power", "talk_alternate", "face_power", "face_deadzone", "follow_ms", "face_invert", "eyes_range", "eyes_range_y", "eyes_invert"]],
   ["Audio and wake word", ["mic_gain_db", "wake_threshold", "wake_chirp"]],
   ["Screen and quiet hours", ["idle_clock_min", "quiet_start", "quiet_end"]],
   ["Weather", ["weather_city"]],
@@ -449,7 +453,7 @@ var LABELS = {
   soft_start_ms: "Soft start ramp", mic_gain_db: "Microphone gain", wake_threshold: "Wake sensitivity",
   shutter_sound: "Camera shutter sound", camera_brightness: "Camera brightness", camera_saturation: "Camera colour", wake_chirp: "Wake chirp",
   idle_clock_min: "Idle clock after", quiet_start: "Quiet hours start", quiet_end: "Quiet hours end",
-  talk_motion: "Move while talking", talk_power: "Talking movement power", talk_alternate: "Talking: one wheel at a time", face_power: "Face turn: maximum power", face_deadzone: "Face turn: centre margin", follow_mode: "Follow me", follow_ms: "Follow: time between looks", face_invert: "Face turn: swap left/right",
+  talk_motion: "Move while talking", talk_power: "Talking movement power", talk_alternate: "Talking: one wheel at a time", face_power: "Face turn: maximum power", face_deadzone: "Face turn: centre margin", follow_mode: "Follow me", follow_ms: "Follow: time between looks", face_invert: "Face turn: swap left/right", eyes_follow: "Eyes follow me", eyes_range: "Eyes: sideways travel", eyes_range_y: "Eyes: up and down travel", eyes_invert: "Eyes: swap left/right",
   weather_city: "Weather city", visualizer_mode: "Speaking screen effect", music_icon: "Music screen picture", log_level: "Log detail"
 };
 var PLACEHOLDERS = {
@@ -514,6 +518,8 @@ var VOICE_COMMANDS = [
     ["Turn", "“turn left”, “turn right”, “turn around”"],
     ["Look at me", "“look at me”, “face me”, “turn to me”: a picture, then a few short turns until Jarvis faces your face"],
     ["Follow me", "“follow me” / “stop following me”: keeps turning towards your face while idle (off again after a restart)"],
+    ["Eyes follow me", "“follow me with your eyes” / “stop following me with your eyes”: only the eyes look at you, Jarvis stays where it is"],
+    ["Eye colour", "“make your eyes blue” (red, orange, yellow, green, teal, blue, purple, pink or white), “normal eyes” gives them their own colours back"],
     ["Talking movements", "“don't move while you talk” / “move when you talk”: the small shakes while Jarvis speaks"],
     ["Dance", "“dance”"]
   ], true],
@@ -981,6 +987,11 @@ function loadStatus() {
       document.getElementById("followSwitch").checked = s.follow;
       document.getElementById("followWord").textContent = s.follow ? "On" : "Off";
     }
+    document.getElementById("eyesRow").style.display = typeof s.eyes === "boolean" ? "" : "none";   // firmware before build 94 reports no "eyes"
+    if (typeof s.eyes === "boolean" && !eyesBusy) {
+      document.getElementById("eyesSwitch").checked = s.eyes;
+      document.getElementById("eyesWord").textContent = s.eyes ? "On" : "Off";
+    }
     $("iUptime", fmtUptime(s.uptime_s || 0));
     $("iFps", s.fps !== undefined ? String(s.fps) : "--");
     $("iCpu", (s.cpu_load !== undefined ? s.cpu_load + "%" : "--") + (s.cpu_mhz ? " · " + s.cpu_mhz + " MHz" : ""));
@@ -1022,6 +1033,16 @@ document.getElementById("followSwitch").addEventListener("change", function () {
   powerPost("action=" + (sw.checked ? "follow_on" : "follow_off")).then(function (r) {
     if (r && r.ok === false) { sw.checked = !sw.checked; jconfirm(r.message || "That did not work.", "OK", false); }
     setTimeout(function () { followBusy = false; loadStatus(); }, 700);
+  });
+});
+var eyesBusy = false;
+document.getElementById("eyesSwitch").addEventListener("change", function () {
+  var sw = this;
+  eyesBusy = true;
+  document.getElementById("eyesWord").textContent = sw.checked ? "On" : "Off";
+  powerPost("action=" + (sw.checked ? "eyes_on" : "eyes_off")).then(function (r) {
+    if (r && r.ok === false) { sw.checked = !sw.checked; jconfirm(r.message || "That did not work.", "OK", false); }
+    setTimeout(function () { eyesBusy = false; loadStatus(); }, 700);
   });
 });
 document.getElementById("faceBtn").addEventListener("click", function () {
@@ -1450,6 +1471,10 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
     "Move while talking": "Bewegen tijdens praten", "Talking movement power": "Kracht van de praatbewegingen", "Face turn: maximum power": "Kracht van gezichts- en volgdraaien", "Follow: time between looks": "Volgen: tijd tussen twee blikken",
     "Face turn: small step": "Gezichtsdraai: kleine stap", "Face turn: medium step": "Gezichtsdraai: middelgrote stap", "Face turn: big step": "Gezichtsdraai: grote stap", "Face turn: swap left/right": "Gezichtsdraai: links/rechts omwisselen",
     "Looking for your face.": "Zoekt je gezicht.", "Follow mode on: Jarvis turns towards your face.": "Volgmodus aan: Jarvis draait naar je gezicht.", "Follow mode off.": "Volgmodus uit.",
+    "Eyes follow me": "Ogen volgen mij", "Eyes off.": "Ogen uit.", "Eyes on: Jarvis looks at you with its eyes and stays where it is.": "Ogen aan: Jarvis kijkt je met zijn ogen aan en blijft staan waar hij staat.",
+    "Eyes that follow you need your own voice server.": "Ogen die je volgen hebben je eigen spraakserver nodig.",
+    "Only the eyes move; Jarvis stays where it is, unless Follow me is on. It takes a picture every second or so while idle.": "Alleen de ogen bewegen; Jarvis blijft staan waar hij staat, tenzij Volg mij aan staat. Hij neemt ongeveer elke seconde een foto zolang hij niets doet.",
+    "Eyes follow me: while Jarvis is idle its eyes on the screen look towards your face, and Jarvis stays where it is. It needs your own voice server and your face in front of the camera. Follow me and Face me use the eyes too": "Ogen volgen mij: zolang Jarvis niets doet kijken zijn ogen op het scherm naar je gezicht, en Jarvis blijft staan. Hij heeft je eigen spraakserver nodig en je gezicht voor de camera. Volg mij en Naar mij kijken gebruiken de ogen ook",
     "Follow mode needs your own voice server.": "Volgmodus heeft je eigen spraakserver nodig.", "Turning to your face needs your own voice server.": "Naar je gezicht draaien heeft je eigen spraakserver nodig.",
     "Wake sensitivity": "Wekgevoeligheid", "Camera shutter sound": "Sluitergeluid camera", "Camera brightness": "Camerahelderheid", "Wake chirp": "Wektjilp",
     "Idle clock after": "Klok bij inactiviteit na", "Quiet hours start": "Stille uren begin", "Quiet hours end": "Stille uren einde", "Weather city": "Plaats voor het weer",
@@ -1487,7 +1512,7 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
   var KEYS = { motor_max_speed: "Topsnelheid", motor_trim: "Stuurcorrectie", turn_ms_per_90: "Draaitijd (90°)", motor_a_invert: "Richting rechtermotor", motor_b_invert: "Richting linkermotor",
     motor_swap: "Links/rechts omwisselen", soft_start_ms: "Zachte start", mic_gain_db: "Microfoonversterking", wake_threshold: "Wekgevoeligheid", shutter_sound: "Sluitergeluid camera",
     camera_brightness: "Camerahelderheid", camera_saturation: "Camerakleur", wake_chirp: "Wektjilp", idle_clock_min: "Klok bij inactiviteit na", quiet_start: "Stille uren begin", quiet_end: "Stille uren einde",
-    talk_motion: "Bewegen tijdens praten", talk_power: "Kracht praatbewegingen", talk_alternate: "Praten: één wiel tegelijk", face_power: "Gezichtsdraai: maximale kracht", face_deadzone: "Gezichtsdraai: marge rond het midden", follow_mode: "Volg mij", follow_ms: "Volgen: tijd tussen blikken", face_invert: "Gezichtsdraai: links/rechts omwisselen",
+    talk_motion: "Bewegen tijdens praten", talk_power: "Kracht praatbewegingen", talk_alternate: "Praten: één wiel tegelijk", face_power: "Gezichtsdraai: maximale kracht", face_deadzone: "Gezichtsdraai: marge rond het midden", follow_mode: "Volg mij", follow_ms: "Volgen: tijd tussen blikken", face_invert: "Gezichtsdraai: links/rechts omwisselen", eyes_follow: "Ogen volgen mij", eyes_range: "Ogen: zijwaarts bewegen", eyes_range_y: "Ogen: omhoog en omlaag bewegen", eyes_invert: "Ogen: links/rechts omwisselen",
     weather_city: "Plaats voor het weer", visualizer_mode: "Schermeffect tijdens praten", music_icon: "Afbeelding muziekscherm", log_level: "Logdetail" };
   function dur(s, wake) {   // "for 1 hr 30 min" / "until you press the BOOT button"
     if (s === "until you press the BOOT button") return "tot je op de BOOT-knop drukt";
@@ -1576,6 +1601,8 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
       ["Draaien", "“turn left”, “turn right”, “turn around”"],
       ["Kijk naar mij", "“look at me” / “kijk naar mij”: een foto, daarna een paar korte draaien tot Jarvis naar je gezicht kijkt"],
       ["Volg me", "“follow me” / “volg me”, “stop following me” / “stop met volgen”: blijft naar je gezicht draaien zolang hij niets doet (na een herstart weer uit)"],
+      ["Ogen volgen mij", "“follow me with your eyes” / “volg me met je ogen”, “stop following me with your eyes” / “stop met volgen met je ogen”: alleen de ogen kijken naar je, Jarvis blijft staan"],
+      ["Oogkleur", "“make your eyes blue” / “maak je ogen blauw” (rood, oranje, geel, groen, turkoois, blauw, paars, roze of wit), “normal eyes” / “normale ogen” geeft ze hun eigen kleuren terug"],
       ["Bewegen tijdens praten", "“don't move while you talk” / “beweeg niet tijdens het praten” en “move when you talk”"],
       ["Dansen", "“dance”"]
     ], true],
