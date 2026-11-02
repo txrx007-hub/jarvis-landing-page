@@ -32,6 +32,7 @@ DEFAULT_SETTINGS = [
     {"key": "soft_start_ms", "kind": "int", "help": "ramp-up time that limits current spikes", "min": 0, "max": 1000, "step": 10, "value": 200},
     {"key": "mic_gain_db", "kind": "int", "help": "software microphone gain in dB", "min": 0, "max": 24, "step": 1, "value": 18},
     {"key": "wake_threshold", "kind": "hundredths", "help": "wake word threshold, lower wakes more easily", "min": 0.5, "max": 0.95, "step": 0.01, "value": 0.52},
+    {"key": "camera_af", "kind": "bool", "help": "autofocus of the OV5640 camera: on keeps the picture sharp at any distance (the lens hunts a little when the scene changes), off holds the focus where it is (does nothing on other cameras)", "value": True},
     {"key": "camera_brightness", "kind": "int", "help": "camera exposure target: raise it if photos come out dark, lower it if bright spots wash out (0 = sensor default)", "min": -5, "max": 5, "step": 1, "value": 2},
     {"key": "camera_saturation", "kind": "int", "help": "camera colour saturation: higher for stronger colours, lower for paler ones (0 = sensor default)", "min": -4, "max": 4, "step": 1, "value": 0},
     {"key": "talk_motion", "kind": "bool", "help": "small left and right body movements while Jarvis is speaking", "value": True},
@@ -98,7 +99,7 @@ def volume_requested():
 def status(host=""):
     s = STATE
     return {
-        "revision": 87, "board": "wall-e-xiao/2.5.0", "board_name": "ESP32 S3 Sense", "camera_detected": True, "camera_sensor": "OV3660",
+        "revision": 87, "board": "wall-e-xiao/2.5.0", "board_name": "ESP32 S3 Sense", "camera_detected": True, "camera_sensor": "OV5640", "camera_af": "on",
         "ssid": "HomeWiFi", "ip": "192.168.1.50", "mac": "AA:BB:CC:DD:EE:FF", "rssi": -51,
         "uptime_s": int(time.time() - s["started"]) + 946, "state": 3, "napping": s["napping"],
         "muted": bool(s.get("muted")), "follow": bool(s.get("follow")), "cpu_load": 42, "fps": 27, "heap_largest_kb": 61, "chip_temp_c": 47.5, "wifi_disconnects": 1, "wifi_last_reason": 200,

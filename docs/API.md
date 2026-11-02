@@ -29,7 +29,7 @@ deep sleep. Replies are `application/json` unless noted. `<ip>` is the robot's a
 ```json
 {
   "board": "wall-e-xiao/2.5.0", "board_name": "ESP32 S3 Sense",
-  "camera_detected": true, "camera_sensor": "OV3660",
+  "camera_detected": true, "camera_sensor": "OV3660", "camera_af": "none",
   "ssid": "HomeWiFi", "ip": "192.168.1.50", "mac": "AA:BB:CC:DD:EE:FF", "rssi": -51,
   "uptime_s": 946, "state": 3, "napping": false, "power": "battery",
   "cpu_load": 42, "cpu_mhz": 240, "fps": 27,
@@ -96,6 +96,7 @@ itself. `l=0&r=0` stops immediately and cancels any queued movement.
 | `action` | Extra | Effect |
 |---|---|---|
 | `nap` | | Light standby, starts about 2 s later |
+| `silence` | | Ends a ringing timer or alarm (the voice server calls it when it hears "stop" during an alarm); `ok` is false when nothing was ringing |
 | `mute` / `unmute` | | The microphone reads silence until unmuted or until the robot restarts (nothing is saved; `muted` in `/api/status`). The speaker stays on |
 | `follow_on` / `follow_off` | | Follow mode (the `follow_mode` setting, always off after a restart): while Jarvis is idle it keeps turning on the spot towards your face. Needs the own voice server; reported as `follow` in `/api/status` (firmware build 81 and newer). The setting `face_invert` (default on since build 82: the camera picture is mirrored against the wheels, so left and right are swapped) |
 | `eyes_on` / `eyes_off` | | Eyes follow me (the `eyes_follow` setting, kept over a restart): while Jarvis is idle the eyes on the screen look towards your face and Jarvis stays where it is. Needs the own voice server; reported as `eyes` in `/api/status` (firmware build 94 and newer). Settings `eyes_range`, `eyes_range_y` (pixels) and `eyes_invert` |
