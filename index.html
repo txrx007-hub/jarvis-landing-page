@@ -444,7 +444,7 @@ var GROUPS = [
   ["Screen and quiet hours", ["idle_clock_min", "quiet_start", "quiet_end"]],
   ["Weather", ["weather_city"]],
   ["Camera", ["camera_af", "camera_idle_off", "camera_brightness", "camera_saturation"]],
-  ["Visualizer", ["visualizer_mode", "music_icon"]],
+  ["Visualizer", ["visualizer_mode", "music_visualizer", "music_icon"]],
   ["System", ["log_level"]]
 ];
 var LABELS = {
@@ -454,7 +454,7 @@ var LABELS = {
   shutter_sound: "Camera shutter sound", camera_af: "Camera autofocus", camera_idle_off: "Camera off between pictures", camera_brightness: "Camera brightness", camera_saturation: "Camera colour", wake_chirp: "Wake chirp",
   idle_clock_min: "Idle clock after", quiet_start: "Quiet hours start", quiet_end: "Quiet hours end",
   talk_motion: "Move while talking", talk_power: "Talking movement power", talk_alternate: "Talking: one wheel at a time", face_power: "Face turn: maximum power", face_deadzone: "Face turn: centre margin", follow_mode: "Follow me", follow_ms: "Follow: time between looks", face_invert: "Wheels: swap left/right (Face me, Follow me)", eyes_follow: "Eyes follow me", eyes_range: "Eyes: sideways travel", eyes_range_y: "Eyes: up and down travel", eyes_invert: "Eyes: swap left/right",
-  weather_city: "Weather city", visualizer_mode: "Speaking screen effect", music_icon: "Music screen picture", log_level: "Log detail"
+  weather_city: "Weather city", visualizer_mode: "Speaking screen effect", music_visualizer: "Moving bars during music", music_icon: "Music screen picture", log_level: "Log detail"
 };
 var PLACEHOLDERS = {
   weather_city: "e.g. Amsterdam (leave empty for off)"
@@ -1514,7 +1514,7 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
     motor_swap: "Links/rechts omwisselen", soft_start_ms: "Zachte start", mic_gain_db: "Microfoonversterking", wake_threshold: "Wekgevoeligheid", shutter_sound: "Sluitergeluid camera",
     camera_af: "Camera-autofocus", camera_idle_off: "Camera uit tussen foto's", camera_brightness: "Camerahelderheid", camera_saturation: "Camerakleur", wake_chirp: "Wektjilp", idle_clock_min: "Klok bij inactiviteit na", quiet_start: "Stille uren begin", quiet_end: "Stille uren einde",
     talk_motion: "Bewegen tijdens praten", talk_power: "Kracht praatbewegingen", talk_alternate: "Praten: één wiel tegelijk", face_power: "Gezichtsdraai: maximale kracht", face_deadzone: "Gezichtsdraai: marge rond het midden", follow_mode: "Volg mij", follow_ms: "Volgen: tijd tussen blikken", face_invert: "Wielen: links/rechts omwisselen (Gezicht, Volg mij)", eyes_follow: "Ogen volgen mij", eyes_range: "Ogen: zijwaarts bewegen", eyes_range_y: "Ogen: omhoog en omlaag bewegen", eyes_invert: "Ogen: links/rechts omwisselen",
-    weather_city: "Plaats voor het weer", visualizer_mode: "Schermeffect tijdens praten", music_icon: "Afbeelding muziekscherm", log_level: "Logdetail" };
+    weather_city: "Plaats voor het weer", visualizer_mode: "Schermeffect tijdens praten", music_visualizer: "Bewegende balken bij muziek", music_icon: "Afbeelding muziekscherm", log_level: "Logdetail" };
   function dur(s, wake) {   // "for 1 hr 30 min" / "until you press the BOOT button"
     if (s === "until you press the BOOT button") return "tot je op de BOOT-knop drukt";
     var m = /^for (?:(\d+) hrs?)?(?: )?(?:(\d+) min)?$/.exec(s);

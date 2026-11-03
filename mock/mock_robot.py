@@ -50,6 +50,7 @@ DEFAULT_SETTINGS = [
     {"key": "weather_city", "kind": "text", "help": "city for the weather line on the idle clock", "max_length": 40, "value": "Amsterdam"},
     {"key": "visualizer_mode", "kind": "enum", "help": "what the screen shows while Jarvis speaks", "value": "rainbow",
      "options": ["off", "winamp", "scope", "radial", "vu", "mouth", "orb", "rainbow"]},
+    {"key": "music_visualizer", "kind": "bool", "help": "the moving bars on the screen while music or radio plays; off shows only the music picture and saves processor time (the speaking screen effect has its own setting)", "value": True},
     {"key": "music_icon", "kind": "enum", "help": "the picture that replaces the eyes while music plays", "value": "music icon 1",
      "options": ["music icon 1", "music icon 2", "music icon 3", "music icon 4"]},
     {"key": "log_level", "kind": "enum", "help": "serial log detail", "value": "warn", "options": ["error", "warn", "info", "debug"]},
