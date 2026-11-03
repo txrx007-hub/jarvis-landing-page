@@ -29,7 +29,7 @@ deep sleep. Replies are `application/json` unless noted. `<ip>` is the robot's a
 ```json
 {
   "board": "wall-e-xiao/2.5.0", "board_name": "ESP32 S3 Sense",
-  "camera_detected": true, "camera_sensor": "OV3660", "camera_af": "none",
+  "camera_detected": true, "camera_sensor": "OV3660", "camera_af": "none", "camera_stream": "on", "camera_stream_starts": 1, "camera_stream_stops": 0, "camera_stream_on_s": 12,
   "ssid": "HomeWiFi", "ip": "192.168.1.50", "mac": "AA:BB:CC:DD:EE:FF", "rssi": -51,
   "uptime_s": 946, "state": 3, "napping": false, "power": "battery",
   "cpu_load": 42, "cpu_mhz": 240, "fps": 27,
