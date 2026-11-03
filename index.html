@@ -212,21 +212,31 @@
   #music .mrow { display: flex; gap: 10px; margin-top: 10px; }
   #music button { flex: 1; }
   #remote { display: none; margin-top: 14px; }
-  .pad {
-    display: grid; grid-template-columns: repeat(3, 76px); grid-template-rows: repeat(3, 76px);
-    gap: 10px; justify-content: center; margin: 4px 0 6px;
-  }
-  .pad button {
-    margin: 0; padding: 0; font-size: 30px; border-radius: 14px;
-    border-color: var(--accent); color: var(--accent);
+  /* the joystick: a ring with a cross, and a round knob that follows the finger (the knob's centre stays inside the ring) */
+  .stick {
+    position: relative; width: min(100%, 300px); aspect-ratio: 1; margin: 10px auto 4px; cursor: grab;
     touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
-  .pad button.held { background: var(--accent-held); }
-  .pad .up { grid-column: 2; grid-row: 1; }
-  .pad .left { grid-column: 1; grid-row: 2; }
-  .pad .right { grid-column: 3; grid-row: 2; }
-  .pad .down { grid-column: 2; grid-row: 3; }
+  .stick .ring { position: absolute; inset: 6%; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    background: radial-gradient(circle, var(--accent-wash), transparent 72%); }
+  .stick .hl, .stick .vl { position: absolute; background: color-mix(in srgb, var(--accent) 35%, transparent); }
+  .stick .hl { left: 9%; right: 9%; top: 50%; height: 1px; }
+  .stick .vl { top: 9%; bottom: 9%; left: 50%; width: 1px; }
+  .stick .knob {
+    position: absolute; left: 35%; top: 35%; width: 30%; aspect-ratio: 1; border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 55%, transparent); border: 2px solid color-mix(in srgb, var(--accent) 80%, #fff);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 45%, transparent);
+    transition: transform .15s ease-out;
+  }
+  .stick .knob::after { content: ""; position: absolute; left: 50%; top: 50%; width: 13%; height: 13%; margin: -6.5% 0 0 -6.5%;
+    transform: rotate(45deg); border: 1.5px solid var(--text); opacity: .8; }
+  .stick.active { cursor: grabbing; }
+  .stick.active .knob { transition: none; background: color-mix(in srgb, var(--accent) 70%, transparent); }
   #remote .help { text-align: center; }
+  #remote .wheels { text-align: center; color: var(--muted); font-size: 13px; margin: 6px 0 0; font-variant-numeric: tabular-nums; }
+  .speedbox { display: flex; align-items: center; gap: 14px; margin-top: 12px; padding: 4px 16px; border: 1px solid var(--card-border); border-radius: 16px; background: var(--field-bg); }
+  .speedbox label { font-weight: 600; font-size: 14px; white-space: nowrap; min-width: 8em; font-variant-numeric: tabular-nums; }
+  .speedbox input[type=range] { margin: 0; flex: 1; min-width: 0; }
   #liveImg { display: none; width: 100%; max-width: 320px; border-radius: 10px; border: 1px solid var(--card-border); margin: 0 auto 8px; }
   #liveRow { display: flex; justify-content: center; margin-top: 8px; }
   #liveMsg { text-align: center; margin: 6px 0 0; }
@@ -350,7 +360,7 @@
   </div>
   <div class="toggles">
     <button id="commandsToggle" class="secondary" data-hint="Everything you can say to Jarvis">Voice commands</button>
-    <button id="remoteToggle" class="secondary" data-hint="Drive the robot: hold an arrow, let go to stop">Remote control</button>
+    <button id="remoteToggle" class="secondary" data-hint="Drive the robot: drag the knob, let go to stop">Remote control</button>
     <button id="cameraBtn" class="secondary" data-hint="Takes one photo with the robot’s camera; with your own backend it is also saved in the dcim folder on the PC">Camera</button>
   </div>
   <div id="music" class="card">
@@ -406,13 +416,12 @@
   </div>
   <div id="remote" class="card">
     <img id="liveImg" alt="Live view from the robot's camera">
-    <div class="pad">
-      <button class="up" data-dir="up" aria-label="Forward">&#9650;</button>
-      <button class="left" data-dir="left" aria-label="Spin left">&#9664;</button>
-      <button class="right" data-dir="right" aria-label="Spin right">&#9654;</button>
-      <button class="down" data-dir="down" aria-label="Backward">&#9660;</button>
+    <p class="help">Drag the knob to steer 360&deg; (forward/back/spin on the spot), let go to stop. <span>Keyboard arrows work too.</span></p>
+    <div class="stick" id="stick" role="application" aria-label="Joystick: drag to drive">
+      <div class="ring"></div><div class="hl"></div><div class="vl"></div><div class="knob" id="knob"></div>
     </div>
-    <p class="help">Hold an arrow to drive (full speed), let go to stop. Keyboard arrows work too.</p>
+    <p class="wheels"><span>Left wheel:</span> <span id="wheelL">0%</span> &middot; <span>Right wheel:</span> <span id="wheelR">0%</span></p>
+    <div class="speedbox" data-hint="How much of its power the wheels get while you drive with the joystick. 100% is full power. It only changes this remote control; the robot's own motor settings stay as they are"><label for="drivePower"><span>Speed:</span> <span id="drivePowerVal">100%</span></label><input type="range" id="drivePower" min="10" max="100" step="5" value="100"></div>
     <div id="liveRow"><button id="liveBtn" class="secondary" data-hint="Shows what the robot sees while you drive: a new picture about once a second, only while this page is open (stops after 3 minutes)">Live view</button></div>
     <p class="status" id="liveMsg"></p>
   </div>
@@ -1176,42 +1185,68 @@ commandsToggle.addEventListener("click", function () {
   commandsToggle.textContent = open ? "Voice commands" : "Hide voice commands";
 });
 
-// Remote control: while any arrow is held, re-send the wheel command every 150 ms. Each command
-// drives for only 500 ms on the robot, so if the page stops sending (released, tab hidden, WiFi
-// dropped) the wheels stop by themselves.
-var DRIVE_SPEED = 100;
+// Remote control: a joystick. The knob follows the finger (or the mouse) anywhere in the circle, up to its edge; where it sits becomes a command for each wheel
+// (-100..100) that is re-sent every 150 ms while the knob is away from the centre. Each command drives for only 500 ms on the robot, so if the page stops
+// sending (let go, tab hidden, WiFi dropped) the wheels stop by themselves. The Speed slider scales the commands (100% = full power); it changes nothing
+// in the robot's own settings.
+var STICK_DEADZONE = 0.08;   // a knob this close to the centre (fraction of its travel) means stop
+var STICK_REACH = 0.29;      // how far the knob's centre can go, as a fraction of the joystick's width (the ring's radius minus the knob's)
 var remoteToggle = document.getElementById("remoteToggle");
 var remotePanel = document.getElementById("remote");
-var held = {};
-var driveTimer = null;
-function wheelCommand() {
-  var f = (held.up ? 1 : 0) - (held.down ? 1 : 0);
-  var t = (held.right ? 1 : 0) - (held.left ? 1 : 0);
-  if (f === 0) return [t * DRIVE_SPEED, -t * DRIVE_SPEED];  // spin in place (or stop)
-  // forward/back plus a side arrow: arc by slowing the inner wheel
-  var l = f * DRIVE_SPEED, r = f * DRIVE_SPEED;
-  if (t > 0) r = Math.round(r * 0.35);
-  if (t < 0) l = Math.round(l * 0.35);
-  return [l, r];
+var stickEl = document.getElementById("stick"), knobEl = document.getElementById("knob");
+var powerEl = document.getElementById("drivePower"), powerValEl = document.getElementById("drivePowerVal");
+var wheelLEl = document.getElementById("wheelL"), wheelREl = document.getElementById("wheelR");
+var padVec = [0, 0];         // the knob under the finger, -1..1 (x to the right, y down, as on the screen)
+var keysHeld = {};           // the arrow keys held
+var stickPointer = null;     // the pointer that holds the knob
+var drivePower = 100;        // the Speed slider, percent
+var driveTimer = null, lastSend = 0;
+function unitVec(x, y) {   // inside the unit circle
+  var m = Math.sqrt(x * x + y * y);
+  return m > 1 ? [x / m, y / m] : [x, y];
+}
+// Stick position (x right, y down, -1..1) and power (0..100) to the two wheel commands. Up is forward, right turns right (left wheel forward, right wheel
+// back); the faster wheel always runs at the knob's distance from the centre, the other one slower the more the knob leans sideways (a sideways-only
+// knob spins on the spot). The dead zone around the centre means stop; outside it the speed grows from zero.
+function wheelCommand(x, y, power) {
+  var v = unitVec(x, y), m = Math.sqrt(v[0] * v[0] + v[1] * v[1]);
+  if (m < STICK_DEADZONE) return [0, 0];
+  var f = -v[1], t = v[0], k = (m - STICK_DEADZONE) / (1 - STICK_DEADZONE) / (Math.abs(f) + Math.abs(t)) * power;
+  return [Math.round((f + t) * k), Math.round((f - t) * k)];
+}
+function stickNow() {   // the finger wins over the keyboard
+  if (stickPointer !== null) return padVec;
+  var kx = (keysHeld.right ? 1 : 0) - (keysHeld.left ? 1 : 0), ky = (keysHeld.down ? 1 : 0) - (keysHeld.up ? 1 : 0);
+  if (kx && ky) kx *= 0.5;   // forward/back plus a side key: an arc, not a pivot
+  return unitVec(kx, ky);
 }
 function sendDrive(l, r) {
+  lastSend = Date.now();
   fetch("/api/drive?l=" + l + "&r=" + r, { method: "POST", cache: "no-store" }).catch(function () {});
 }
 function updateDrive() {
-  var cmd = wheelCommand();
-  var buttons = remotePanel.querySelectorAll(".pad button");
-  for (var i = 0; i < buttons.length; i++) {
-    buttons[i].classList.toggle("held", !!held[buttons[i].getAttribute("data-dir")]);
-  }
+  var s = stickNow(), cmd = wheelCommand(s[0], s[1], drivePower);
+  var reach = stickEl.clientWidth * STICK_REACH, u = unitVec(s[0], s[1]);
+  knobEl.style.transform = "translate(" + (u[0] * reach).toFixed(1) + "px," + (u[1] * reach).toFixed(1) + "px)";
+  wheelLEl.textContent = cmd[0] + "%";
+  wheelREl.textContent = cmd[1] + "%";
   if (cmd[0] === 0 && cmd[1] === 0) {
     if (driveTimer) { clearInterval(driveTimer); driveTimer = null; sendDrive(0, 0); }
     return;
   }
-  sendDrive(cmd[0], cmd[1]);
-  if (driveTimer) clearInterval(driveTimer);
-  driveTimer = setInterval(function () { var c = wheelCommand(); sendDrive(c[0], c[1]); }, 150);
+  if (Date.now() - lastSend >= 80) sendDrive(cmd[0], cmd[1]);   // a moving finger makes many events; the 150 ms timer carries the latest position
+  if (!driveTimer) driveTimer = setInterval(function () { var c = stickNow(), w = wheelCommand(c[0], c[1], drivePower); if (w[0] || w[1]) sendDrive(w[0], w[1]); else updateDrive(); }, 150);
 }
-function releaseAll() { held = {}; updateDrive(); }
+function releaseAll() {
+  keysHeld = {}; padVec = [0, 0]; stickPointer = null;
+  stickEl.classList.remove("active");
+  updateDrive();
+}
+powerEl.addEventListener("input", function () {
+  drivePower = parseInt(powerEl.value, 10) || 100;
+  powerValEl.textContent = drivePower + "%";
+  updateDrive();
+});
 
 // ---- the same touch feel as the app: a short vibration tick on a press (phones that allow it), one confirm popup for everything hard to undo,
 // and a small hint popup when a button with data-hint is pressed and held (the hint also shows as a tooltip on a computer)
@@ -1230,7 +1265,7 @@ function jconfirm(question, okLabel, danger) {
     box.showModal();
   });
 }
-document.addEventListener("click", function (e) { if (e.target.closest && e.target.closest("button") && !e.target.closest(".pad")) tick(8); });
+document.addEventListener("click", function (e) { if (e.target.closest && e.target.closest("button")) tick(8); });
 document.addEventListener("DOMContentLoaded", function () {   // the hint box sits after this script in the page
   var tip = document.getElementById("hint"), timer = null, hideTimer = null, shown = false;
   Array.prototype.forEach.call(document.querySelectorAll("[data-hint]"), function (el) { el.title = el.getAttribute("data-hint"); });
@@ -1255,28 +1290,42 @@ document.addEventListener("DOMContentLoaded", function () {   // the hint box si
   document.addEventListener("click", function (e) { if (shown) { e.stopPropagation(); e.preventDefault(); shown = false; } }, true);   // the press that opened a hint is not a tap
   document.addEventListener("contextmenu", function (e) { if (e.target.closest && e.target.closest("[data-hint]")) e.preventDefault(); });
 });
-Array.prototype.forEach.call(remotePanel.querySelectorAll(".pad button"), function (btn) {
-  var dir = btn.getAttribute("data-dir");
-  btn.addEventListener("pointerdown", function (e) {
-    e.preventDefault();
-    if (btn.setPointerCapture) btn.setPointerCapture(e.pointerId);
-    held[dir] = true; updateDrive(); tick(15);
-  });
-  ["pointerup", "pointercancel", "lostpointercapture"].forEach(function (type) {
-    btn.addEventListener(type, function () { if (held[dir]) { delete held[dir]; updateDrive(); tick(8); } });
-  });
-  btn.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+function padFromEvent(e) {   // the knob goes where the finger is, and stops at the edge of its travel
+  var rc = stickEl.getBoundingClientRect(), reach = rc.width * STICK_REACH;
+  return unitVec((e.clientX - rc.left - rc.width / 2) / reach, (e.clientY - rc.top - rc.height / 2) / reach);
+}
+stickEl.addEventListener("pointerdown", function (e) {
+  if (stickPointer !== null) return;
+  e.preventDefault();
+  stickPointer = e.pointerId;
+  try { stickEl.setPointerCapture(e.pointerId); } catch (x) {}
+  stickEl.classList.add("active");
+  padVec = padFromEvent(e); updateDrive(); tick(15);
 });
+stickEl.addEventListener("pointermove", function (e) {
+  if (e.pointerId !== stickPointer) return;
+  e.preventDefault();
+  padVec = padFromEvent(e); updateDrive();
+});
+["pointerup", "pointercancel", "lostpointercapture"].forEach(function (type) {
+  stickEl.addEventListener(type, function (e) {
+    if (e.pointerId !== stickPointer) return;
+    stickPointer = null; padVec = [0, 0];
+    stickEl.classList.remove("active");
+    updateDrive(); tick(8);
+  });
+});
+stickEl.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 var KEY_DIRS = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" };
 document.addEventListener("keydown", function (e) {
   var dir = KEY_DIRS[e.key];
-  if (!dir || remotePanel.style.display !== "block") return;
+  if (!dir || remotePanel.style.display !== "block" || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.nodeName || "")) return;
   e.preventDefault();
-  if (!held[dir]) { held[dir] = true; updateDrive(); }
+  if (!keysHeld[dir]) { keysHeld[dir] = true; updateDrive(); }
 });
 document.addEventListener("keyup", function (e) {
   var dir = KEY_DIRS[e.key];
-  if (dir && held[dir]) { delete held[dir]; updateDrive(); }
+  if (dir && keysHeld[dir]) { delete keysHeld[dir]; updateDrive(); }
 });
 window.addEventListener("blur", releaseAll);
 document.addEventListener("visibilitychange", function () { if (document.hidden) releaseAll(); });
@@ -1433,7 +1482,7 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
     // buttons and cards
     "Voice commands": "Spraakopdrachten", "Hide voice commands": "Verberg spraakopdrachten", "Remote control": "Afstandsbediening", "Hide remote": "Verberg afstandsbediening",
     "Everything you can say to Jarvis": "Alles wat je tegen Jarvis kunt zeggen",
-    "Drive the robot: hold an arrow, let go to stop": "Bestuur de robot: houd een pijl ingedrukt, laat los om te stoppen",
+    "Drive the robot: drag the knob, let go to stop": "Bestuur de robot: sleep de knop, laat los om te stoppen",
     "Takes one photo with the robot’s camera; with your own backend it is also saved in the dcim folder on the PC": "Maakt één foto met de camera van de robot; met je eigen backend wordt die ook opgeslagen in de dcim-map op de pc",
     "Music": "Muziek", "Nothing playing": "Er speelt niets", "Next": "Volgende",
     "Stops the song, radio station or podcast now": "Stopt het nummer, het radiostation of de podcast direct",
@@ -1448,7 +1497,10 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
     "Until BOOT button": "Tot BOOT-knop", "Go to deep sleep": "Ga in diepe slaap",
     "Volume": "Volume", "Speaker volume": "Speakervolume", "100% is full volume.": "100% is volledig volume.",
     "Forward": "Vooruit", "Spin left": "Links draaien", "Spin right": "Rechts draaien", "Backward": "Achteruit",
-    "Hold an arrow to drive (full speed), let go to stop. Keyboard arrows work too.": "Houd een pijl ingedrukt om te rijden (volle snelheid), laat los om te stoppen. De pijltjestoetsen op het toetsenbord werken ook.",
+    "Drag the knob to steer 360° (forward/back/spin on the spot), let go to stop.": "Sleep de knop om 360° te sturen (vooruit/achteruit/ter plekke draaien), laat los om te stoppen.",
+    "Keyboard arrows work too.": "De pijltjestoetsen op het toetsenbord werken ook.",
+    "Joystick: drag to drive": "Joystick: sleep om te rijden", "Left wheel:": "Linkerwiel:", "Right wheel:": "Rechterwiel:", "Speed:": "Snelheid:",
+    "How much of its power the wheels get while you drive with the joystick. 100% is full power. It only changes this remote control; the robot's own motor settings stay as they are": "Hoeveel van zijn kracht de wielen krijgen terwijl je met de joystick rijdt. 100% is volle kracht. Het verandert alleen deze afstandsbediening; de eigen motorinstellingen van de robot blijven zoals ze zijn",
     "Live view": "Live beeld", "Stop live view": "Stop live beeld", "Starting...": "Starten...",
     "Shows what the robot sees while you drive: a new picture about once a second, only while this page is open (stops after 3 minutes)": "Toont wat de robot ziet terwijl je rijdt: ongeveer elke seconde een nieuw beeld, alleen zolang deze pagina open is (stopt na 3 minuten)",
     "Live view stopped after 3 minutes. Tap Live view to continue.": "Live beeld gestopt na 3 minuten. Tik op Live beeld om door te gaan.",

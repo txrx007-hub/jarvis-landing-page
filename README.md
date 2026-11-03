@@ -8,7 +8,7 @@ It is one self-contained file, [`index.html`](index.html) (plain HTML, CSS and J
 libraries, no internet needed), and it talks to the robot through a small JSON API documented in
 [`docs/API.md`](docs/API.md).
 
-| Info, power, nap and deep sleep | Remote control (hold the arrows) | Settings |
+| Info, power, nap and deep sleep | Remote control (joystick) | Settings |
 |---|---|---|
 | <img src="docs/screenshots/landing-top-dark.png" width="260"> | <img src="docs/screenshots/landing-remote-dark.png" width="260"> | <img src="docs/screenshots/landing-settings-dark.png" width="260"> |
 | <img src="docs/screenshots/landing-power-light.png" width="260"> | <img src="docs/screenshots/landing-voice-light.png" width="260"> | <img src="docs/screenshots/landing-settings-light.png" width="260"> |
@@ -33,9 +33,10 @@ and the voice-command reference in Dutch).
 - **Device info**: board, camera (detected + sensor), MAC, live ping, mode (console / battery), status,
   uptime, FPS, CPU load, PSRAM, RAM, heap, WiFi signal, audio rate. Polled every second, ping 3 times a second.
 - **Power**: Nap / Wake up, and Deep sleep for any hours + minutes (or until the BOOT button), with a confirmation.
-- **Remote control**: four arrows, hold to drive at full speed; two together turn in an arc. The page
-  re-sends the command every 150 ms and the robot stops 500 ms after the last one, so a lost connection stops it.
-  **Live view** (button under the arrows) shows what the robot sees while you drive: a new small picture about once a second (nothing is kept, the robot's own screen stays
+- **Remote control**: a joystick, the knob follows your finger (or the mouse) and steers 360°: up and down drive, sideways spins on the spot, in between arcs. The
+  **Speed** slider below it scales the wheels (default 100% = full power, a setting of this page only). Under the joystick the two wheel commands are shown. The page
+  re-sends the command every 150 ms and the robot stops 500 ms after the last one, so a lost connection stops it. The arrow keys still work.
+  **Live view** (button under the joystick) shows what the robot sees while you drive: a new small picture about once a second (nothing is kept, the robot's own screen stays
   as it is), only while the page is open, stopping by itself after 3 minutes. The pictures are taken in a task of their own, so driving is not held up.
 - **Settings** built from what the robot reports (sliders, switches, dropdowns, time pickers, text),
   grouped into Motors, Audio and wake word, Screen and quiet hours, Weather, Camera, Visualizer, System. Changes
