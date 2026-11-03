@@ -46,6 +46,7 @@ deep sleep. Replies are `application/json` unless noted. `<ip>` is the robot's a
 | `power` | `"console"` when a PC is attached over USB, `"battery"` when the robot is online without one (a plain USB charger also reads `battery`) |
 | `cpu_load` | Percent, averaged since the previous call |
 | `fps` | Screen redraws per second since the previous call; 0 when the screen is static |
+| `ui_render_us`, `ui_renders`, `ui_inv_px`, `ui_invs`, `ui_bars_us`, `ui_bars_n`, `fft_us`, `fft_n` | Audit counters since boot (firmware revision 106 and newer), cumulative: microseconds LVGL spent rendering and the number of renders, screen pixels and number of invalidations (areas marked for redrawing), microseconds and calls of the music bars' update, microseconds and number of spectrum windows analysed. Take two readings and divide the differences by the time between them to see where the screen's time goes |
 | `heap_largest_kb` | Largest free block of internal memory |
 | `rssi` | WiFi signal in dBm |
 | `server`, `server_custom` | The voice server's OTA URL in use, and whether it is an own server (`true`) or the built-in default cloud (`false`) |
