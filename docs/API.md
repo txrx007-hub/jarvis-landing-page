@@ -92,6 +92,10 @@ clamped). Empty `200` reply. **Each command only lasts 500 ms**, so a client tha
 again about every 150 ms; if the commands stop (button released, WiFi lost, app closed) the robot stops by
 itself. `l=0&r=0` stops immediately and cancels any queued movement.
 
+While the robot is idle its Wi-Fi radio sleeps and wakes only about once a second, which would delay commands and make the wheels run in bursts. Every
+`/api/drive` call therefore keeps the radio fully awake for 8 s (firmware revision 107). `POST /api/drive?awake=1` does only that and moves nothing: the landing
+page sends it every 3 s while its remote panel is open, so the first press is quick too. Clients that drive (apps) can do the same.
+
 ## POST /api/power?action=...
 
 | `action` | Extra | Effect |

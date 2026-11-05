@@ -230,7 +230,8 @@ class Handler(BaseHTTPRequestHandler):
             STATE["playing"] = False
             self._send(json.dumps({"ok": True}))
         elif url.path == "/api/drive":
-            STATE["drive"] = (int(q.get("l", ["0"])[0]), int(q.get("r", ["0"])[0]), time.time())
+            if "awake" not in q:   # ?awake=1 only keeps the real robot's Wi-Fi radio awake: no motor command
+                STATE["drive"] = (int(q.get("l", ["0"])[0]), int(q.get("r", ["0"])[0]), time.time())
             self._send(b"", "text/plain")
         elif url.path == "/api/power":
             action = q.get("action", [""])[0]

@@ -1430,11 +1430,17 @@ liveBtn.addEventListener("click", function () {
 });
 document.addEventListener("visibilitychange", function () { if (document.hidden && liveOn) liveStop(""); });
 
+// While the remote panel is open the robot's Wi-Fi radio is kept out of power save (it sleeps while idle and wakes about once a second, which made the wheels
+// run and stop in bursts): /api/drive?awake=1 every 3 s moves nothing, it only keeps the radio awake, and each drive command does the same.
+var awakeTimer = null;
+function awakePing() { if (!document.hidden) fetch("/api/drive?awake=1", { method: "POST", cache: "no-store" }).catch(function () {}); }
+function awakeStart() { if (!awakeTimer) { awakePing(); awakeTimer = setInterval(awakePing, 3000); } }
+function awakeStop() { clearInterval(awakeTimer); awakeTimer = null; }
 remoteToggle.addEventListener("click", function () {
   var open = remotePanel.style.display === "block";
   remotePanel.style.display = open ? "none" : "block";
   remoteToggle.textContent = open ? "Remote control" : "Hide remote";
-  if (open) { releaseAll(); if (liveOn) liveStop(""); }
+  if (open) { releaseAll(); awakeStop(); if (liveOn) liveStop(""); } else { awakeStart(); }
 });
 buildCommands();
 
