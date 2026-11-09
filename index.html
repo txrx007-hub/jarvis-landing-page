@@ -441,7 +441,7 @@
 </div>
 <script>
 // Settings that exist on the device but are not offered on the page (fixed at their defaults).
-var HIDDEN = { motor_max_speed: true, shutter_sound: true, follow_mode: true, eyes_follow: true, eye_color: true, camera_drive: true };   // follow_mode and eyes_follow have their own switches in the Follow me card
+var HIDDEN = { motor_max_speed: true, shutter_sound: true, follow_mode: true, eyes_follow: true, eye_color: true, camera_drive: true, camera_idle_off: true };   // follow_mode and eyes_follow have their own switches in the Follow me card
 // Groups control section order and titles; any key not listed lands in "Other".
 // Groups shown as a toggle button that expands to their settings (remembered while the page is open).
 var COLLAPSIBLE = { "Motors": true, "Face and movement": true, "Audio and wake word": true, "Screen and quiet hours": true };
@@ -450,9 +450,9 @@ var GROUPS = [
   ["Motors", ["motor_trim", "turn_ms_per_90", "motor_a_invert", "motor_b_invert", "motor_swap", "soft_start_ms"]],
   ["Face and movement", ["talk_motion", "talk_power", "talk_alternate", "face_power", "face_deadzone", "follow_ms", "face_invert", "eyes_range", "eyes_range_y", "eyes_invert"]],
   ["Audio and wake word", ["mic_gain_db", "wake_threshold", "wake_chirp"]],
-  ["Screen and quiet hours", ["idle_clock_min", "quiet_start", "quiet_end"]],
+  ["Screen and quiet hours", ["subtitle_style", "idle_clock_min", "quiet_start", "quiet_end"]],
   ["Weather", ["weather_city"]],
-  ["Camera", ["camera_af", "camera_idle_off", "camera_brightness", "camera_saturation"]],
+  ["Camera", ["camera_af", "camera_brightness", "camera_saturation"]],
   ["Visualizer", ["visualizer_mode", "music_visualizer", "music_icon"]],
   ["System", ["log_level"]]
 ];
@@ -461,7 +461,7 @@ var LABELS = {
   motor_a_invert: "Right motor direction", motor_b_invert: "Left motor direction", motor_swap: "Swap left/right",
   soft_start_ms: "Soft start ramp", mic_gain_db: "Microphone gain", wake_threshold: "Wake sensitivity",
   shutter_sound: "Camera shutter sound", camera_af: "Camera autofocus", camera_idle_off: "Camera off between pictures", camera_brightness: "Camera brightness", camera_saturation: "Camera colour", wake_chirp: "Wake chirp",
-  idle_clock_min: "Idle clock after", quiet_start: "Quiet hours start", quiet_end: "Quiet hours end",
+  subtitle_style: "Spoken text style", idle_clock_min: "Idle clock after", quiet_start: "Quiet hours start", quiet_end: "Quiet hours end",
   talk_motion: "Move while talking", talk_power: "Talking movement power", talk_alternate: "Talking: one wheel at a time", face_power: "Face turn: maximum power", face_deadzone: "Face turn: centre margin", follow_mode: "Follow me", follow_ms: "Follow: time between looks", face_invert: "Wheels: swap left/right (Face me, Follow me)", eyes_follow: "Eyes follow me", eyes_range: "Eyes: sideways travel", eyes_range_y: "Eyes: up and down travel", eyes_invert: "Eyes: swap left/right",
   weather_city: "Weather city", visualizer_mode: "Speaking screen effect", music_visualizer: "Moving bars during music", music_icon: "Music screen picture", log_level: "Log detail"
 };
@@ -977,7 +977,10 @@ function loadStatus() {
 
     var $ = function (id, text) { document.getElementById(id).textContent = text; };
     var stateName = s.napping ? "napping" : (STATE_NAMES[s.state] || "state " + s.state);
-    if (!s.napping && STATE_NAMES[s.state] === "speaking" && musicPlaying) stateName = "music mode";
+    // "Music mode" only while the audio really is music (the robot says so with s.music, firmware 109 and newer); while Jarvis speaks the line says "speaking".
+    // An older robot has no s.music: it falls back to the backend's player state, which can still say "playing" while Jarvis talks.
+    var musicNow = (typeof s.music === "boolean") ? s.music : musicPlaying;
+    if (!s.napping && STATE_NAMES[s.state] === "speaking" && musicNow) stateName = "music mode";
     $("iBoard", s.board_name || (s.board || "").split("/")[0]);
     $("revLabel", s.revision ? "Rev " + s.revision : "");
     $("iCamera", s.camera_detected ? "YES" + (s.camera_sensor ? " (" + s.camera_sensor + ")" : "") : "NO");
@@ -1540,6 +1543,7 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
     "Speaking screen effect": "Schermeffect tijdens praten", "Music screen picture": "Afbeelding muziekscherm", "Log detail": "Logdetail",
     "On": "Aan", "Off": "Uit", "off": "uit", "(not set)": "(niet ingesteld)",
     "music icon 1": "muziekicoon 1", "music icon 2": "muziekicoon 2", "music icon 3": "muziekicoon 3", "music icon 4": "muziekicoon 4",
+    "line": "lopende regel", "chat": "chat", "how Jarvis's words show under the face: line = one line scrolling from right to left, chat = lines of text that scroll from top to bottom as they are spoken": "hoe Jarvis' woorden onder het gezicht staan: line = één regel die van rechts naar links loopt, chat = regels tekst die van boven naar beneden scrollen terwijl ze worden uitgesproken",
     "e.g. Amsterdam (leave empty for off)": "bijv. Amsterdam (leeg laten = uit)", "(leave empty for off)": "(leeg laten = uit)",
     "caps all movement, in percent": "begrenst alle beweging, in procenten",
     "wheel balance: raise it if Jarvis drifts left, lower it if it drifts right": "wielbalans: verhoog de waarde als Jarvis naar links afdrijft, verlaag hem als hij naar rechts afdrijft",
@@ -1570,7 +1574,7 @@ setInterval(pollPing, 333);  // ~3x/sec, per the settings page's own live-ping r
   };
   var KEYS = { motor_max_speed: "Topsnelheid", motor_trim: "Stuurcorrectie", turn_ms_per_90: "Draaitijd (90°)", motor_a_invert: "Richting rechtermotor", motor_b_invert: "Richting linkermotor",
     motor_swap: "Links/rechts omwisselen", soft_start_ms: "Zachte start", mic_gain_db: "Microfoonversterking", wake_threshold: "Wekgevoeligheid", shutter_sound: "Sluitergeluid camera",
-    camera_af: "Camera-autofocus", camera_idle_off: "Camera uit tussen foto's", camera_brightness: "Camerahelderheid", camera_saturation: "Camerakleur", wake_chirp: "Wektjilp", idle_clock_min: "Klok bij inactiviteit na", quiet_start: "Stille uren begin", quiet_end: "Stille uren einde",
+    camera_af: "Camera-autofocus", camera_idle_off: "Camera uit tussen foto's", camera_brightness: "Camerahelderheid", camera_saturation: "Camerakleur", wake_chirp: "Wektjilp", subtitle_style: "Stijl van gesproken tekst", idle_clock_min: "Klok bij inactiviteit na", quiet_start: "Stille uren begin", quiet_end: "Stille uren einde",
     talk_motion: "Bewegen tijdens praten", talk_power: "Kracht praatbewegingen", talk_alternate: "Praten: één wiel tegelijk", face_power: "Gezichtsdraai: maximale kracht", face_deadzone: "Gezichtsdraai: marge rond het midden", follow_mode: "Volg mij", follow_ms: "Volgen: tijd tussen blikken", face_invert: "Wielen: links/rechts omwisselen (Gezicht, Volg mij)", eyes_follow: "Ogen volgen mij", eyes_range: "Ogen: zijwaarts bewegen", eyes_range_y: "Ogen: omhoog en omlaag bewegen", eyes_invert: "Ogen: links/rechts omwisselen",
     weather_city: "Plaats voor het weer", visualizer_mode: "Schermeffect tijdens praten", music_visualizer: "Bewegende balken bij muziek", music_icon: "Afbeelding muziekscherm", log_level: "Logdetail" };
   function dur(s, wake) {   // "for 1 hr 30 min" / "until you press the BOOT button"

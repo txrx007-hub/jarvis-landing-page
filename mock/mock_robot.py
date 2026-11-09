@@ -48,6 +48,7 @@ DEFAULT_SETTINGS = [
     {"key": "quiet_start", "kind": "time", "help": "night mode start, HH:MM or off", "value": "22:30"},
     {"key": "quiet_end", "kind": "time", "help": "night mode end, HH:MM or off", "value": None},
     {"key": "weather_city", "kind": "text", "help": "city for the weather line on the idle clock", "max_length": 40, "value": "Amsterdam"},
+    {"key": "subtitle_style", "kind": "enum", "help": "how Jarvis's words show under the face: line = one line scrolling from right to left, chat = lines of text that scroll from top to bottom as they are spoken", "value": "line", "options": ["line", "chat"]},
     {"key": "visualizer_mode", "kind": "enum", "help": "what the screen shows while Jarvis speaks", "value": "rainbow",
      "options": ["off", "winamp", "scope", "radial", "vu", "mouth", "orb", "rainbow"]},
     {"key": "music_visualizer", "kind": "bool", "help": "the moving bars on the screen while music or radio plays; off shows only the music picture and saves processor time (the speaking screen effect has its own setting)", "value": True},

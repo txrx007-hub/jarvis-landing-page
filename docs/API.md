@@ -43,6 +43,7 @@ deep sleep. Replies are `application/json` unless noted. `<ip>` is the robot's a
 |---|---|
 | `state` | Device state index: 0 unknown, 1 starting, 2 wifi setup, 3 idle, 4 connecting, 5 listening, 6 speaking, 7 notifying, 8 upgrading, 9 activating, 10 testing audio, 11 fatal error |
 | `napping` | Light standby is on (screen off, 160 MHz, WiFi and wake word still on) |
+| `music` | `true` only while the audio is music, a radio station or a podcast (the server marked that turn); `false` while Jarvis speaks. The status line says "Music mode" from it (firmware 109 and newer; an older robot has no such field) |
 | `power` | `"console"` when a PC is attached over USB, `"battery"` when the robot is online without one (a plain USB charger also reads `battery`) |
 | `cpu_load` | Percent, averaged since the previous call |
 | `fps` | Screen redraws per second since the previous call; 0 when the screen is static |
