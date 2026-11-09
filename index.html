@@ -625,7 +625,7 @@ function loadBrainStatus() {
     var name = short(b.last || b.main);
     var el = document.getElementById("iBrain");
     row.style.display = name ? "" : "none";
-    el.textContent = name + (b.backup ? " (backup)" : "");
+    el.textContent = (b.tag ? b.tag + " · " : "") + name + (b.backup ? " (backup)" : "");   // tag: "uncensored" or "venice" (older backends send none)
     el.style.color = b.backup ? "var(--instant)" : "";
     el.title = b.backup ? "The main brain (" + short(b.main) + ") failed" + (b.failed ? " (" + b.failed + ")" : "") + ", so a backup answered the last question" : "The brain that answered the last question";
     s.remove();
